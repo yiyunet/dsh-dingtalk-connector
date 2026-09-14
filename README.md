@@ -427,7 +427,7 @@ The organization admin has not enabled "Allow members to access their personal d
 ## 九、开发
 
 ```sh
-npm install          # 装 esbuild（构建期）与可选的 qrcode；装完会自动构建（postinstall）
+npm install          # 装 esbuild（构建期）与可选的 qrcode；装完会自动构建（prepare）
 npm run build        # plugin-src/ → lib/（宿主：复制加横幅；客户端：esbuild + 装载器 wrapper）
 npm test             # node --test 纯函数测试（调度 / CSV / 任务存储 / 命令注册表）
 npm run verify       # 八类发布契约断言
@@ -447,7 +447,7 @@ npm run check        # build && test && verify   ← CI 跑的就是这一条
 
 | 防护 | 行为 |
 |---|---|
-| `postinstall` 钩子 | `npm install` 装完自动跑一次构建。**它永不失败**（构建失败也只打印指引，不会让 install 整体失败）；别人把它当依赖安装时静默跳过（发布包自带 `lib/`） |
+| `prepare` 钩子 | `npm install` 装完自动跑一次构建。**它永不失败**（构建失败也只打印指引，不会让 install 整体失败）；别人把它当依赖安装时静默跳过（发布包自带 `lib/`）。<br>⚠️ **为什么是 `prepare` 而不是 `postinstall`**：pnpm 10+ 默认**拦截依赖的安装期脚本**（供应链防护），`postinstall` 会让**消费者侧直接安装失败**（`ERR_PNPM_IGNORED_BUILDS`）；而 `prepare` 对 registry 依赖根本不执行，恰好不在拦截范围内 |
 | `npm run doctor` | 只读自检，逐项报告「Node / esbuild / 9 个宿主源文件 / `lib/` 产物 / qrcode」是否就位，并直接给出该跑什么 |
 
 **症状对照**：DSH 起不来、日志说 `@yiyunet/dsh-dingtalk-connector` 模块找不到或入口缺失

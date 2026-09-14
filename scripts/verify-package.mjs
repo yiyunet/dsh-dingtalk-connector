@@ -17,6 +17,8 @@
  *         私有词表经环境变量 DSH_PRIVATE_TERMS 挂入，词表本身放仓库外，
  *         避免"防泄漏的机制自己成为泄漏源"
  *   ⑧ files 白名单必须自洽（条目在磁盘上存在 + 生命周期脚本引用的文件已入包 + 入口文件已入包）
+ *      ＋ **安装期脚本禁则**：不得声明 preinstall / install / postinstall
+ *        —— pnpm 10+ 默认拦截依赖的安装期脚本，会让消费者侧安装**直接失败**
  *      —— **本地 link: 装载时 files 完全不生效**，漏件在开发机上永远看不见；
  *         一旦 npm publish，安装方 postinstall 找不到文件 → npm install 直接失败
  */
@@ -320,6 +322,18 @@ for (const entry of declaredEntries) {
   const topLevel = normalized.split('/')[0]
   check(filesWhitelist.includes(normalized) || filesWhitelist.includes(topLevel),
     `package.json 声明的入口「${entry}」不在 files 白名单内 —— 发布后该入口会缺失`)
+}
+
+// ⑧-4 安装期脚本禁则
+// 为什么：pnpm 10+ 默认**拦截依赖的安装期脚本**（供应链防护）。一旦本包声明
+// `postinstall`，消费者用 pnpm 安装时会直接报 `ERR_PNPM_IGNORED_BUILDS` 并中断安装
+// —— 实测（macOS + pnpm 11.24.0）`dsh plugin add` 就是因此失败的。
+// 构建自动化必须走 `prepare`：它对 registry 依赖根本不执行，故不在拦截范围内，
+// 但在开发安装 / git 依赖安装 / 发布前照常执行。
+for (const hook of ['preinstall', 'install', 'postinstall']) {
+  check(!(hook in (manifest.scripts ?? {})),
+    `package.json 不得声明 \`${hook}\` —— pnpm 10+ 对依赖的安装期脚本默认拦截，`
+    + '会让消费者侧安装**直接失败**（ERR_PNPM_IGNORED_BUILDS）。构建自动化请改用 `prepare`')
 }
 
 // ── 汇总 ──────────────────────────────────────────────────────────────────

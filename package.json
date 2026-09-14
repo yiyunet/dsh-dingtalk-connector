@@ -103,7 +103,7 @@
     "verify": "node scripts/verify-package.mjs",
     "inspect": "node scripts/inspect-bundle.mjs",
     "doctor": "node scripts/doctor.mjs",
-    "postinstall": "node scripts/postinstall.mjs",
+    "prepare": "node scripts/postinstall.mjs",
     "prepublishOnly": "npm run check",
     "check": "npm run build && npm test && npm run verify"
   },

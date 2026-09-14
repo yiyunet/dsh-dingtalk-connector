@@ -7,6 +7,22 @@
 
 ### 修复
 
+- **🔴 消费者侧安装被 pnpm 拦死（`ERR_PNPM_IGNORED_BUILDS`）**：`package.json` 声明了 `postinstall`，
+  而 **pnpm 10+ 默认拦截依赖的安装期脚本**（供应链防护）。
+  实测（macOS + pnpm 11.24.0）：`dsh plugin add @yiyunet/dsh-dingtalk-connector` **直接失败**。
+  讽刺的是——该脚本对消费者**本是空操作**（发布包自带 `lib/`），
+  却让消费者为一道什么都不做的脚本付出了「安装失败」的代价。
+  - **修法**：钩子由 `postinstall` 改为 **`prepare`**。
+    `prepare` 对 registry 依赖**根本不执行**（故 pnpm 不将其列为待批准脚本），
+    但在**开发安装 / git 依赖安装 / 发布前**照常执行 —— 语义恰好是我们要的。
+  - **顺带订正一处错误注释**：`scripts/postinstall.mjs` 原写着 "`lib/` **不在** npm 包里"，
+    与同文件另一处 "发布包里已经带 `lib/`" **自相矛盾**。正确表述是：
+    `lib/` **在**发布包里（`files` 白名单）⇒ 消费者不需要构建；
+    `lib/` **不在**版本库里（`.gitignore`）⇒ 克隆后必须构建。
+    **这个错误前提，正是当初会写出"消费者也要构建"的原因之一。**
+  - 文件名 `scripts/postinstall.mjs` 保持不变（历史遗留），
+    以免破坏既有引用与 `verify-package.mjs` 的必需文件断言。
+
 - **Windows 构建瞬时 `EPERM` 根治**：`scripts/build.mjs` 的原子替换块此前**没有重试**——
   一次瞬时文件锁就让整个构建失败，并进而使 `prepublishOnly` **中止整个发布流程**。
   实测（2026-09-14，Windows）同一条命令连续 4 次里 **2 次 `EPERM`、2 次成功**，失败后立刻重跑即通过。
