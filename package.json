@@ -1,6 +1,6 @@
 {
   "name": "@yiyunet/dsh-dingtalk-connector",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "DSH 插件：读写钉钉 AI 表格（多维表 / aitable），并提供「钉钉文档」设置面板与定时导出。包装钉钉官方 dws CLI。 Read and write DingTalk AI Tables from DeepSeek Harness, with a settings panel and scheduled CSV export.",
   "keywords": [
     "deepseek-harness",
