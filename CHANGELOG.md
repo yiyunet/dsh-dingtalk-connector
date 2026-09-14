@@ -3,10 +3,35 @@
 本文件记录对外可见的行为变化。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
-## [Unreleased] — 门面补齐
+## [Unreleased]
 
-> **发布状态说明**：`1.0.0` **尚未发布到 npm**（`npm view @yiyunet/dsh-dingtalk-connector` 返回 404）。
-> 因此本节内容实际会并入**首次公开发布**的版本，不单独占版本号。
+### 修复
+
+- **Windows 构建瞬时 `EPERM` 根治**：`scripts/build.mjs` 的原子替换块此前**没有重试**——
+  一次瞬时文件锁就让整个构建失败，并进而使 `prepublishOnly` **中止整个发布流程**。
+  实测（2026-09-14，Windows）同一条命令连续 4 次里 **2 次 `EPERM`、2 次成功**，失败后立刻重跑即通过。
+  - **根因**：Windows 上 `rename()` 底层走 `MoveFileEx`，只要**源目录内任一文件**（或目标路径）
+    被其它进程持有句柄，就返回 `ACCESS_DENIED` → Node 报 `EPERM`。杀软实时扫描、Windows 搜索索引器、
+    宿主进程的文件监听，都会在「刚写入的目录」上制造**毫秒到秒级**的瞬时占用。
+    **POSIX 允许重命名已被打开的目录，故 Linux CI 从不触发本问题** —— 这是 Windows 开发机特有现象。
+  - **修法**：新增 `withTransientRetry()`，**仅**对 `EPERM` / `EACCES` / `EBUSY` 三种瞬时码做线性退避重试
+    （200 → 1000ms，最多 5 次，累计约 3s）；**其余错误立即抛出**，不被退避拖慢。
+    覆盖替换块的 5 个调用点（含回滚）。
+  - **顺带修掉一个更隐蔽的缺陷**：回滚原为 `rename(BACKUP, LIB).catch(() => {})` —— **静默吞掉失败**。
+    回滚一旦失败会留下「没有 `lib/`」的最坏状态（插件加载不了），而报错却写着"已回滚到旧产物"，
+    **报的和实际相反**。现改为回滚同样重试；真失败则明确报出备份所在路径，可手动改名恢复。
+  - **可观测**：每次重试都会打印 `· 瞬时文件锁（EPERM）：… → 400ms 后重试`，
+    使该修复**可被事后验证**，而不是"悄悄生效"。
+  - **影响面**：仅 `scripts/build.mjs` 的替换块；**不触及** `plugin-src/`、产物结构、RPC 端点、写门禁。
+    该修复随包发布（`scripts/` 在 `files` 白名单内），对下游 `postinstall` 同样有效。
+
+---
+
+## [1.0.0] - 2026-09-14
+
+> 本节记录 1.0.0 从开发到**首次公开发布**的全部变更。以下内容原以 `[Unreleased]` 形式累积，
+> 因 1.0.0 已于 2026-09-14 发布到 npm（registry 的 `dist.integrity` 与本仓库提交 `84671d0e` 一致），
+> 故正式归入本版本。
 
 ### 新增
 
@@ -56,21 +81,20 @@
   词表刻意不入仓——`scripts/` 在 `files` 白名单里，放进去会被打进发布包，
   那就成了「防泄漏的机制自己泄漏」。未设置环境变量时该项自动跳过。
 
-### 已知未完成
+### 已知未完成（截至 2026-09-14）
 
-- **GitHub 仓库已建但为空、npm 包未发布**：仓库 `yiyunet/dsh-dingtalk-connector` 已创建
-  （public、空仓库、默认分支 `main`），但**尚未推送任何内容**；
-  `package.json` 中 `repository` / `homepage` / `bugs` 三个 URL 在推送前仍无效。
-  仓库 About 区（description / topics）待填，文案见 `docs/发布与版本管理.md`。
-  README 里的 `npx @yiyunet/dsh-dingtalk-connector install|doctor` 引导**在 npm 发布前跑不通**。
+- **GitHub About 区 `topics` 仍为空**：`description` 已填、`license` 已由 GitHub 自动识别为 MIT；
+  `topics` 仍为 `[]`（该输入框需**每输一个按一次回车**才会成为标签）。
 - **面板真实截图待补**：清单与打码要求见 `docs/images/README.md`。
 - **联系方式二维码待补**：README「联系方式」一节留有占位。
+- **README 中指向 `docs/…` 的相对链接在 npm 包页是否可点** —— `docs/` 不在 `files` 白名单内，
+  社区有大量同类报告（WordPress/gutenberg#36426 等），**待人工点一次确认**。
 
 ---
 
-## [1.0.0] - 2026-09-14
+### 首发内容与架构反转留痕
 
-首次公开发布。**v0.1 → v0.2 → v1.0.0 之间发生过一次架构级反转**，在此完整留痕，便于使用者理解取舍。
+**v0.1 → v0.2 → v1.0.0 之间发生过一次架构级反转**，在此完整留痕，便于使用者理解取舍。
 
 ### 架构（重要）
 

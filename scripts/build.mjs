@@ -45,6 +45,54 @@ const CLIENT_GLOBAL = '__DshDingtalkConnector'
 /** 客户端只允许这些外部模块（其余一律打包进来或直接报错）。 */
 const CLIENT_EXTERNAL = ['react', 'react-dom', 'react/jsx-runtime', 'react-dom/client']
 
+/**
+ * 瞬时文件锁退避重试 —— Windows 特有痛点的根治。
+ *
+ * 为什么需要：Windows 上 `rename()` 底层走 MoveFileEx，只要**源目录内任一文件**（或目标路径）
+ * 被其它进程持有句柄，就返回 ERROR_ACCESS_DENIED → Node 报 `EPERM`。杀软实时扫描、Windows
+ * 搜索索引器、编辑器与宿主进程的文件监听，都会在「刚写入的目录」上制造**毫秒到秒级**的瞬时占用。
+ *
+ * 实测（2026-09-14，Windows）：同一条命令连续 4 次里 **2 次 EPERM、2 次成功**；失败后立刻重跑即通过。
+ * **POSIX 允许重命名已被打开的目录，故 Linux CI 从不触发本问题** —— 这是 Windows 开发机特有现象。
+ *
+ * 不重试的代价：把「等一秒就好」变成「构建失败」，进而让 `prepublishOnly` **中止整个发布流程**。
+ * 而下面的原子替换设计本就是为了抗失败 —— 在最后一步功亏一篑最冤。
+ *
+ * @param {() => Promise<unknown>} operation 要执行的文件操作
+ * @param {string} what 失败时用于指名道姓的说明（写「做什么」，不要写「失败了」）
+ */
+const TRANSIENT_FS_CODES = new Set(['EPERM', 'EACCES', 'EBUSY'])
+
+async function withTransientRetry(operation, what, { attempts = 6, baseDelayMs = 200 } = {}) {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await operation()
+    } catch (error) {
+      const code = error?.code
+      // 非瞬时错误（如路径不存在、参数错）立即抛出，不被退避拖慢
+      if (!TRANSIENT_FS_CODES.has(code)) throw error
+      if (attempt >= attempts) {
+        throw new Error(
+          `${what} 失败：连续 ${attempts} 次遇到瞬时文件锁（${code}）。\n`
+          + '  · 常见原因：杀毒软件实时扫描 / Windows 搜索索引器 / 其它进程正持有该目录句柄\n'
+          + '    （例如正在加载本插件的宿主进程 DSH）\n'
+          + '  · 处理：关掉占用该目录的程序后重跑 `npm run build`；'
+          + '或把本仓库目录加入杀毒软件排除项\n'
+          + `  · 原始错误：${error.message}`,
+        )
+      }
+      // 线性退避 200→400→600→800→1000ms（累计约 3s）：够覆盖杀软扫描窗口，
+      // 又不至于让真正的权限问题拖太久才报出来。
+      // 每次重试都出声 —— 否则补丁只是"悄悄生效"，事后无从判断它到底有没有用。
+      console.warn(
+        `  · 瞬时文件锁（${code}）：${what}`
+        + ` → ${baseDelayMs * attempt}ms 后重试（第 ${attempt} 次，最多 ${attempts - 1} 次）`,
+      )
+      await new Promise(resolveDelay => { setTimeout(resolveDelay, baseDelayMs * attempt) })
+    }
+  }
+}
+
 const GENERATED_BANNER = name =>
   `// ⚠️ 本文件由 \`npm run build\` 从 plugin-src/ 生成 —— 请勿直接编辑。\n`
   + `// 真源：plugin-src/${name}\n`
@@ -316,16 +364,38 @@ try {
     // 这样"旧产物消失"与"新产物就位"之间只隔一次 rename（毫秒级），
     // 且任一步失败都能从 .lib-backup 还原 —— 不会出现"两份都没有"的窗口。
     const BACKUP = join(ROOT, '.lib-backup')
-    await rm(BACKUP, { recursive: true, force: true })
+    await withTransientRetry(
+      () => rm(BACKUP, { recursive: true, force: true }),
+      '清理上一次留下的 .lib-backup',
+    )
     const hadLib = await stat(LIB).then(s => s.isDirectory()).catch(() => false)
-    if (hadLib) await rename(LIB, BACKUP)
-    try {
-      await rename(STAGING, LIB)
-    } catch (error) {
-      if (hadLib) await rename(BACKUP, LIB).catch(() => {})
-      throw new Error(`替换 lib/ 失败，已回滚到旧产物：${error?.message ?? error}`)
+    if (hadLib) {
+      await withTransientRetry(() => rename(LIB, BACKUP), '把旧 lib/ 挪成 .lib-backup')
     }
-    await rm(BACKUP, { recursive: true, force: true })
+    try {
+      await withTransientRetry(() => rename(STAGING, LIB), '把暂存区就位为 lib/')
+    } catch (error) {
+      // 回滚同样要抗瞬时锁：回滚失败会留下「没有 lib/」的最坏状态（插件加载不了），
+      // 必须如实报出来 —— 不能像以前那样 `.catch(() => {})` 吞掉。
+      let rollbackNote = ''
+      if (hadLib) {
+        try {
+          await withTransientRetry(
+            () => rename(BACKUP, LIB),
+            '回滚 .lib-backup → lib/',
+            { attempts: 3 },
+          )
+        } catch (rollbackError) {
+          rollbackNote = `；⚠️ 且回滚也失败：${rollbackError.message}\n`
+            + `  · 旧产物仍在 ${BACKUP}，可手动改名回 lib/ 恢复`
+        }
+      }
+      throw new Error(`替换 lib/ 失败${rollbackNote}。原始错误：${error?.message ?? error}`)
+    }
+    await withTransientRetry(
+      () => rm(BACKUP, { recursive: true, force: true }),
+      '清理 .lib-backup',
+    )
     console.log('  · 产物已原子替换 lib/')
   }
 } catch (error) {
