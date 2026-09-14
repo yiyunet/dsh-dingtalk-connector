@@ -1,0 +1,54 @@
+# @yiyunet/dsh-dingtalk-connector —— profile 组合层
+#
+# 本插件包装钉钉官方 `dws`（dingtalk-workspace-cli）执行 `dws aitable ...`，
+# 与钉钉官方 OpenClaw connector 同构（其仓库 skills/dws-cli/ 即此路线）。
+#
+# ⚠️ 绝不要把 Client Secret 写在本文件里。凭证走环境变量（见 clientIdEnv 说明）。
+- insert:
+    - id: dingtalk-connector
+      name: '@yiyunet/dsh-dingtalk-connector'
+      config:
+        # ── dws 可执行入口 ──────────────────────────────────────────────
+        # dwsCommand：PATH 上的命令名。Windows 下 .cmd 需经 shell，参数会被 shell 解释，
+        #             因此含引号/&/| 的记录文本会被拒绝（插件有硬校验，防注入）。
+        dwsCommand: dws
+
+        # dwsEntry（推荐，Windows 必设）：指向 dws 的 JS 入口，插件用 node 直接 spawn，
+        #             完全不走 shell → 任意文本安全。
+        #             先用 `npm root -g` 确认前缀，再按下面形状取消注释并替换占位符：
+        #   Windows: <npm root -g>\dingtalk-workspace-cli\bin\dws.js
+        #   macOS/Linux: <npm root -g>/dingtalk-workspace-cli/bin/dws.js
+        # dwsEntry: '<npm root -g>/dingtalk-workspace-cli/bin/dws.js'
+
+        timeoutMs: 60000          # 单条 dws 命令超时（毫秒）
+
+        # ── 凭证（二选一即可）─────────────────────────────────────────────
+        # 方式 A（推荐，headless）：设环境变量后重启 Host，插件把它们注入 dws 子进程。
+        #   凭证只走环境变量，**不进命令行参数**（避免出现在进程列表里）。
+        clientIdEnv: DWS_CLIENT_ID
+        clientSecretEnv: DWS_CLIENT_SECRET
+        # 方式 B：完全交给 dws 自己的登录态（dws auth login 扫码），则上面两个变量留空即可。
+
+        # ── 写门禁（默认全关，刻意的安全设计）─────────────────────────────
+        allowWrite: false        # 开启后可 create / update
+        allowDelete: false       # 开启后可 delete（比 allowWrite 更严，独立开关 + 逐次 confirm）
+
+        maxBatch: 30             # 单次批量上限（官方 connector skill 规定 ≤30；dws 接口上限 100）
+
+        # ── 扫描 / 导出 / 定时同步 ────────────────────────────────────────
+        # 同步任务定义文件（默认 <DSH home>/dingtalk-connector/jobs.json，
+        # 与插件代码分离，升级插件不丢任务）
+        # jobsFile: '/absolute/path/to/dingtalk-jobs.json'
+
+        # 可选：把导出落盘**限制**在指定目录内。不设则不限制（可用任意绝对路径）。
+        # ⚠️ 导出以 Host 进程身份写文件，不受 agent 沙箱约束 —— 建议设定此项以收窄权限。
+        # exportRoot: '/absolute/path/to/export-dir'
+
+        # 可选：面板里「选表后自动填充的默认导出目录」。不设则只填文件名，由你补目录。
+        # defaultExportDir: '/absolute/path/to/export-dir'
+
+        # 可选：二维码包（qrcode）的解析兜底路径。设了 qrcode 为可选依赖，
+        # 解析不到时面板会明确降级为「只显示深链 + 授权码」，不影响授权。
+        # qrcodeFrom: '<path-to-node_modules>/qrcode'
+
+        scanConcurrency: 4       # 扫描可读性实测的并发数（防限流）

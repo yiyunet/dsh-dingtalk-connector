@@ -1,0 +1,29 @@
+# 依赖与构建
+node_modules/
+.editorconfig
+
+# 构建产物：lib/ 是 npm run build 的输出（发布时由 files 白名单带进包，但不入库）
+# 注意：package.json 的 main 指向 lib/index.mjs ⇒ 全新克隆后必须先 build（postinstall 已自动化）
+lib/
+.lib-staging/
+.lib-backup/
+
+# 本机运行产物（绝不入库）
+.dsh/
+*.log
+*.csv
+
+# 导出与临时目录
+dingtalk-export/
+
+# 编辑器 / 系统
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# 本地私有配置（凭证、个人路径）——如你本地另存了 patch 覆盖文件
+cordis.patch.local.yml
+.env
+.env.*

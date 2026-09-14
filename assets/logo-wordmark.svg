@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 160" width="720" height="160" role="img"
+     aria-label="dsh-dingtalk-connector wordmark">
+  <title>dsh-dingtalk-connector wordmark</title>
+  <defs>
+    <linearGradient id="m" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2E90FF"/>
+      <stop offset="1" stop-color="#0B5FD9"/>
+    </linearGradient>
+    <style>
+      .n { font: 700 46px/1 "Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif; fill: #1677FF; }
+      .s { font: 400 22px/1 "Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif; fill: #5A7FA8; }
+    </style>
+  </defs>
+
+  <!-- 透明底：适配浅色/深色背景 -->
+  <g transform="translate(16 30)">
+    <rect x="0" y="0" width="100" height="100" rx="26" fill="url(#m)"/>
+    <g fill="#FFFFFF">
+      <rect x="20" y="24" width="60" height="12" rx="5" opacity="0.95"/>
+      <rect x="20" y="42" width="17" height="12" rx="5" opacity="0.72"/>
+      <rect x="41" y="42" width="17" height="12" rx="5" opacity="0.72"/>
+      <rect x="62" y="42" width="17" height="12" rx="5" opacity="0.72"/>
+      <rect x="20" y="58" width="17" height="12" rx="5" opacity="0.72"/>
+      <rect x="41" y="58" width="17" height="12" rx="5" opacity="0.72"/>
+      <rect x="62" y="58" width="17" height="12" rx="5" opacity="0.72"/>
+    </g>
+    <circle cx="80" cy="80" r="20" fill="#FFFFFF"/>
+    <path d="M72 80 h13 m-5 -6 l6 6 l-6 6" fill="none" stroke="#0B5FD9" stroke-width="4"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <text class="n" x="136" y="72">dsh-dingtalk-connector</text>
+  <text class="s" x="138" y="106">钉钉 AI 表格 × DeepSeek Harness</text>
+</svg>

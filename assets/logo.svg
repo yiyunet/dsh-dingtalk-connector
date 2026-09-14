@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="dsh-dingtalk-connector">
+  <title>dsh-dingtalk-connector</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2E90FF"/>
+      <stop offset="1" stop-color="#0B5FD9"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 底板 -->
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#bg)"/>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#sheen)"/>
+
+  <!-- 表格母题：表头 + 3×2 网格 -->
+  <g fill="#FFFFFF">
+    <rect x="56" y="66" width="144" height="26" rx="8" opacity="0.95"/>
+    <rect x="56" y="104" width="42" height="26" rx="7" opacity="0.72"/>
+    <rect x="107" y="104" width="42" height="26" rx="7" opacity="0.72"/>
+    <rect x="158" y="104" width="42" height="26" rx="7" opacity="0.72"/>
+    <rect x="56" y="142" width="42" height="26" rx="7" opacity="0.72"/>
+    <rect x="107" y="142" width="42" height="26" rx="7" opacity="0.72"/>
+    <rect x="158" y="142" width="42" height="26" rx="7" opacity="0.72"/>
+  </g>
+
+  <!-- 连接器：右下角箭头，表示"接入 Harness" -->
+  <g transform="translate(150 168)">
+    <circle cx="30" cy="30" r="30" fill="#FFFFFF"/>
+    <path d="M18 30 h20 m-8 -9 l9 9 l-9 9" fill="none" stroke="#0B5FD9" stroke-width="6"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
