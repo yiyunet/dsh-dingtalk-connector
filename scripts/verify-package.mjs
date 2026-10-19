@@ -249,9 +249,13 @@ if (privateTermsPath === '') {
     failures.push(`DSH_PRIVATE_TERMS 指向的文件读不到：${privateTermsPath}`)
   } else {
     const terms = privateTermsText
+      .replace(/^\uFEFF/u, '')   // PowerShell 的 UTF8 会写 BOM；不清掉会把首行变成一个永不匹配的垃圾词
       .split(/\r?\n/u)
       .map(line => line.trim())
       .filter(line => line !== '' && !line.startsWith('#'))
+    if (terms.length === 0) {
+      failures.push(`DSH_PRIVATE_TERMS 指向的词表是空的：${privateTermsPath} —— 空词表会让本项恒绿，等于没设`)
+    }
     // `lib/` 必须扫：消费者拿到的是产物，源码干净不代表产物干净（改了源码不重建，
     // 发布出去的仍是旧内容 —— 这正是 1.0.2 漏出品牌名的路径）。
     const SKIP_DIRS = new Set(['node_modules', '.git', '.lib-staging', '.lib-backup', 'dingtalk-export'])
