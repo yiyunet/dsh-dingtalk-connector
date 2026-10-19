@@ -106,7 +106,7 @@ export function apply(ctx, config = {}) {
       }
       if (args.confirm !== true) {
         throw new DwsError('CONFIRM_REQUIRED',
-          '删除不可逆，须逐次确认：请先向老板展示目标记录并取得同意，再以 confirm=true 重试。', {
+          '删除不可逆，须逐次确认：请先向用户展示目标记录并取得同意，再以 confirm=true 重试。', {
             hint: '官方 skill 同样要求：危险操作先展示摘要 → 用户明确同意 → 才加 --yes。',
           })
       }
@@ -262,7 +262,7 @@ export function apply(ctx, config = {}) {
       templateId: { type: 'string', description: 'action=create 时的模板 ID' },
       cursor: { type: 'string', description: '分页游标，首次不传' },
       limit: { type: 'number', description: '每页数量（list 最大 10）' },
-      confirm: { type: 'boolean', description: 'action=delete 时须为 true（已获老板同意）' },
+      confirm: { type: 'boolean', description: 'action=delete 时须为 true（已获用户同意）' },
     },
     output: textOutput,
     async execute(args) {
@@ -419,7 +419,7 @@ export function apply(ctx, config = {}) {
       + '⚠️ 钉钉侧没有"列出我全部 Base"的接口：base list 只给最近访问，base search 每次约 4 条且**游标翻页无效**'
       + '（实测：hasMore 是误报）。所以本清单是"候选 ∪ 补录"，不保证穷尽——多给关键词或直接给 baseId 可扩大覆盖。',
     parameters: {
-      keywords: { type: 'string', description: '搜索关键词，逗号分隔（如 "FOTRIC,管理,报表"）。越多覆盖越广' },
+      keywords: { type: 'string', description: '搜索关键词，逗号分隔（如 "报表,管理"）。越多覆盖越广' },
       extraBaseIds: { type: 'string', description: '人工补录的 baseId，逗号分隔（从表格 URL 或已知清单来）' },
       withTables: { type: 'boolean', description: '是否顺带返回每个可读 Base 的数据表清单（tableId+表名）' },
       tableLimit: { type: 'number', description: 'withTables=true 时每 Base 最多返回几张表，默认 0=不限制' },

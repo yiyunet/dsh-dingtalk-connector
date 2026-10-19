@@ -219,7 +219,11 @@ const SENSITIVE = [
   { pattern: /\/home\/[A-Za-z0-9._-]+\//u, label: 'Linux 个人绝对路径' },
   { pattern: /\bclientSecret\s*[:=]\s*['"][A-Za-z0-9_\-+/=]{16,}['"]/u, label: '疑似硬编码凭证' },
 ]
-for (const relativePath of SCAN_FILES) {
+// 产物同扫：消费者装的是 `lib/`，个人绝对路径与硬编码凭证在那里同样不许出现。
+const libFiles = (await readdir(resolve(ROOT, 'lib'), { withFileTypes: true }).catch(() => []))
+  .filter(entry => entry.isFile() && /\.(?:mjs|cjs|js|json|md)$/iu.test(entry.name))
+  .map(entry => `lib/${entry.name}`)
+for (const relativePath of [...SCAN_FILES, ...libFiles]) {
   const text = await readIfExists(relativePath)
   if (text === undefined) continue
   for (const { pattern, label } of SENSITIVE) {
@@ -233,8 +237,13 @@ for (const relativePath of SCAN_FILES) {
 // 放进去会被原样打进发布包 —— 那就成了"防泄漏的机制自己泄漏"。
 // 因此改为由环境变量指向一份仓库外的私有词表：DSH_PRIVATE_TERMS=/abs/path/terms.txt
 // 未设置时本项跳过（CI 上不会设置，因此 CI 永远不接触这些词）。
+/** 把产物里的 `\uXXXX` 转义还原成明文 —— esbuild 会把中文字符串转义，直接搜原文必然漏。 */
+const decodeEscaped = text => text.replace(/\\u([0-9A-Fa-f]{4})/gu, (_m, hex) => String.fromCharCode(parseInt(hex, 16)))
+
 const privateTermsPath = (process.env.DSH_PRIVATE_TERMS || '').trim()
-if (privateTermsPath !== '') {
+if (privateTermsPath === '') {
+  console.log('  ⚠️ 私有词表扫描：跳过（未设置 DSH_PRIVATE_TERMS）—— 发布前必须设置，否则本项等于没跑')
+} else {
   const privateTermsText = await readFile(privateTermsPath, 'utf8').catch(() => undefined)
   if (privateTermsText === undefined) {
     failures.push(`DSH_PRIVATE_TERMS 指向的文件读不到：${privateTermsPath}`)
@@ -243,7 +252,9 @@ if (privateTermsPath !== '') {
       .split(/\r?\n/u)
       .map(line => line.trim())
       .filter(line => line !== '' && !line.startsWith('#'))
-    const SKIP_DIRS = new Set(['node_modules', '.git', 'lib', '.lib-staging', '.lib-backup', 'dingtalk-export'])
+    // `lib/` 必须扫：消费者拿到的是产物，源码干净不代表产物干净（改了源码不重建，
+    // 发布出去的仍是旧内容 —— 这正是 1.0.2 漏出品牌名的路径）。
+    const SKIP_DIRS = new Set(['node_modules', '.git', '.lib-staging', '.lib-backup', 'dingtalk-export'])
     const TEXT_EXT = /\.(?:md|mjs|cjs|js|json|ya?ml|txt|svg|html?)$/iu
     const collect = async (dir, prefix = '') => {
       const out = []
@@ -261,7 +272,7 @@ if (privateTermsPath !== '') {
       const text = await readIfExists(relativePath)
       if (text === undefined) continue
       for (const term of terms) {
-        if (text.includes(term)) {
+        if (text.includes(term) || decodeEscaped(text).includes(term)) {
           failures.push(`${relativePath} 命中私有词表条目「${term}」—— 公开仓库不得包含内部信息，发布前必须清除`)
         }
       }

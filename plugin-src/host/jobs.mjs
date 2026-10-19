@@ -4,7 +4,7 @@
  * 任务落在 DSH home 下的独立 JSON 文件（默认 ~/.dsh/dingtalk-connector/jobs.json），
  * 与插件代码分离 —— 升级插件不丢任务定义。
  *
- * 调度语义（老板 2026-09-14 裁决）："接受 DSH 开着才执行"。
+ * 调度语义（维护者约定）："接受 DSH 开着才执行"。
  * 即：定时器跑在 DSH host 进程内，host 一停就不执行；重启后由 scheduler 重算下次触发点。
  */
 

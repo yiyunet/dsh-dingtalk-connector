@@ -146,7 +146,7 @@ export async function exportTableCsv(runner, options) {
   const content = recordsToCsvWithBom(records, catalog)
 
   await mkdir(dirname(target), { recursive: true })
-  await writeFile(target, content, 'utf8')      // 直接覆盖同名文件（老板裁决的默认行为）
+  await writeFile(target, content, 'utf8')      // 直接覆盖同名文件（维护者约定的默认行为）
 
   // 自证：回读首 3 字节确认 BOM 真的落盘。编辑器看不见 BOM，ripgrep 还会主动剥掉它 —— 只有字节可信。
   const head = Buffer.alloc(3)

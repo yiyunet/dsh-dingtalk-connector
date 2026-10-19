@@ -25,7 +25,7 @@ import React from 'react'
 const RPC_ENDPOINT = 'dsh-dingtalk-connector'
 
 /** 面板默认关键词与默认导出目录（宿主可通过 status.defaultExportDir 覆盖）。 */
-const DEFAULT_KEYWORDS = 'FOTRIC,管理,报表'
+const DEFAULT_KEYWORDS = '报表,管理'
 const FALLBACK_EXPORT_DIR = ''
 
 const h = React.createElement
@@ -467,7 +467,7 @@ function Panel(props) {
         )
         : null,
 
-      // CLI 版本 / 凭证来源 / 写门禁 按老板要求不显示（需要时用 dingtalk_aitable_diagnose 查看）
+      // CLI 版本 / 凭证来源 / 写门禁 按维护者要求不显示（需要时用 dingtalk_aitable_diagnose 查看）
       status && status.authError
         ? h('div', { style: { marginTop: 8 } },
           h('span', { style: S.badgeBad }, '当前 profile 未授权'),
