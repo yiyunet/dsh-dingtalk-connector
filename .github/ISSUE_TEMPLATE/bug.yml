@@ -1,0 +1,59 @@
+name: 报告问题 / Bug report
+description: 插件出错、不工作，或者和说明不一致 / Something is broken or not working as described
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: 谢谢反馈！中文、英文都行。/ Thanks for the report! Chinese or English is fine.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: 发生了什么 / What happened
+      description: 你做了什么、看到了什么、本来应该怎样 / What you did, what you saw, what you expected
+    validations:
+      required: true
+
+  # 装不上、工具调不通、设置面板空、工作流卡住 —— 这几处是各自独立的代码路径，
+  # 先知道落在哪一段，定位就不用从「整个插件」开始。可留空。
+  - type: dropdown
+    id: where
+    attributes:
+      label: 哪一块 / Which part
+      description: 不确定就留空 / Leave blank if unsure
+      multiple: false
+      options:
+        - 安装与配置（前置条件 / cordis.patch.yml）
+        - 十个工具（工具调用失败或结果不对）
+        - 设置面板「钉钉文档」
+        - 工作流（扫描 → 勾选 → 定时）
+        - 定时任务没有触发
+        - 卸载 / 更新
+        - 不算某一项（整体、文档、其他）/ other
+
+  - type: input
+    id: versions
+    attributes:
+      label: 版本 / Versions
+      description: DSH 版本和插件版本，DSH 侧栏的插件页能看到 / DSH and plugin versions, shown on the DSH Plugins page
+      placeholder: DSH 0.2.1-rc.1, plugin 1.0.3
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: 系统 / OS
+      placeholder: Windows 11
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 截图或日志 / Screenshots or logs
+      description: |
+        可选。**贴之前先删掉钉钉凭证、手机号、组织名等敏感信息** ——
+        本插件会碰到企业数据，这几样不该出现在公开 issue 里。
+        / Optional. **Remove DingTalk credentials, phone numbers and org names first** —
+        this plugin touches enterprise data, and none of that belongs in a public issue.

@@ -1,0 +1,16 @@
+# 新 issue 的入口页：两条「你可能先想看一眼」的指路 ＋ 允许开空白 issue。
+#
+# 为什么留 `blank_issues_enabled: true`：模板是**帮忙**，不是门槛。
+# 强制所有反馈都填表，只会把「用法问一句」的人挡在门外，或者逼他硬填一个 bug 模板。
+blank_issues_enabled: true
+
+contact_links:
+  - name: 安装 / 用法问题，先看 README
+    url: https://github.com/yiyunet/dsh-dingtalk-connector#readme
+    about: 前置条件、安装、配置、十个工具、工作流、排错 —— README 里都有 / Install, config, tools, workflows and troubleshooting
+  - name: 安全相关，请勿公开提 issue
+    url: https://github.com/yiyunet/dsh-dingtalk-connector#%E5%85%AB%E5%AE%89%E5%85%A8%E4%B8%8E%E8%BE%B9%E7%95%8C
+    about: 本插件涉及钉钉凭证与组织数据访问，安全问题的处理方式见「八、安全与边界」 / This plugin touches DingTalk credentials and org data — see the security section
+  - name: yiyunet 的其他 DSH 插件 / More DSH plugins
+    url: https://github.com/yiyunet
+    about: 学习插件、文档体检、MCP 管理、出口代理 / Learning, doc audit, MCP manager, egress proxy

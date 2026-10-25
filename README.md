@@ -550,8 +550,11 @@ dingtalk_aitable_diagnose
 
 ## 十三、联系方式
 
-- **问题反馈 / 功能建议**：优先走 [GitHub Issues](https://github.com/yiyunet/dsh-dingtalk-connector/issues)
+- **问题反馈 / 功能建议**：[提一个 issue](https://github.com/yiyunet/dsh-dingtalk-connector/issues/new/choose)。
+  报问题时写上 **DSH 版本**和**插件版本**，修起来最快。
 - **安全相关**：请勿公开提 issue —— 本插件涉及钉钉凭证与组织数据访问，详见「八、安全与边界」
+
+> 模板会问版本号与系统；日志与截图**贴之前请先删掉钉钉凭证、手机号、组织名**。
 
 <!--
   待补（不影响功能，补齐即为门面完整）：

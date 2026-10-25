@@ -444,10 +444,13 @@ dws --version
 
 ## Contact
 
-- **Bug reports / feature requests**: please use
-  [GitHub Issues](https://github.com/yiyunet/dsh-dingtalk-connector/issues)
+- **Bug reports / feature requests**: [open an issue](https://github.com/yiyunet/dsh-dingtalk-connector/issues/new/choose).
+  Include the **DSH version** and the **plugin version** — that makes a fix much faster.
 - **Security**: do not open a public issue — this plugin handles DingTalk credentials and organizational
   data access. See the "Security and boundaries" section above.
+
+> The template asks for versions and OS. Before pasting logs or screenshots,
+> **remove DingTalk credentials, phone numbers and org names**.
 
 ---
 
