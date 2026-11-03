@@ -29,7 +29,7 @@
 ## Overview
 
 A DSH plugin that connects **DingTalk AI Tables** (multi-dimensional tables / aitable) to DeepSeek Harness.
-Once installed you get **10 `dingtalk_aitable_*` tools** plus a **"钉钉文档" settings panel** — discover Bases,
+Once installed you get **10 `dingtalk_aitable_*` tools** plus a **"ANB 工具 → 钉钉文档" panel** — discover Bases,
 inspect tables, query records by condition, batch-write rows, export BOM-prefixed CSVs readable by Excel,
 and **schedule recurring exports**.
 
@@ -48,10 +48,11 @@ over-broad permissions" as a viable combination.
 
 ## Screenshots
 
-<img src="docs/images/panel-schematic.svg" alt="Settings panel: 钉钉文档 — structural diagram" width="100%">
+<img src="docs/images/panel-schematic.svg" alt="Settings → ANB 工具 → 钉钉文档 — structural diagram" width="100%">
 
-> The image above is a **structural diagram, not a screenshot**. Settings → "钉钉文档" (order 22, right after
-> "IM机器人") contains three areas: **account binding / AI Table list / scheduled export**.
+> The image above is a **structural diagram, not a screenshot**. Settings → **ANB 工具** (shell order 16) →
+> the **"钉钉文档"** tab (order 10 inside the shell) contains three areas:
+> **account binding / AI Table list / scheduled export**.
 > Real screenshots are still pending — see [docs/images/README.md](docs/images/README.md) for the shot list
 > and the redaction requirements.
 
@@ -221,7 +222,12 @@ Use `npm root -g` to find the actual prefix on your machine.
 
 ## Settings panel
 
-A first-level section **「钉钉文档」** appears in Settings (order 22, right after the IM panel).
+The panel lives in **Settings → ANB 工具**, as a tab in that shell (shell order 16, this tab order 10).
+
+The **ANB 工具** shell is **bundled inside this package** — it is *not* a separate package you have to install:
+installing any ANB-series plugin brings the shell with it. With several ANB plugins installed there is still
+**only one shell** (a runtime singleton) — the first one to start registers it and the others yield;
+if the owner is disabled, the next ANB plugin takes over and the tab bar lists every panel in order.
 
 | Area | Contents |
 |---|---|

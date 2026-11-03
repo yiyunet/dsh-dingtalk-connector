@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" width="1200" height="760" role="img"
-     aria-label="设置面板「钉钉文档」结构示意（非截图）">
-  <title>设置面板「钉钉文档」结构示意（非截图）</title>
+     aria-label="设置 → ANB 工具 →「钉钉文档」结构示意（非截图）">
+  <title>设置 → ANB 工具 →「钉钉文档」结构示意（非截图）</title>
   <defs>
     <style>
       .bg   { fill: #FAFCFF; }
@@ -19,7 +19,7 @@
   <rect class="bg" x="0" y="0" width="1200" height="760" rx="18"/>
 
   <!-- 标题 -->
-  <text class="th" x="36" y="46">设置 →「钉钉文档」面板结构示意</text>
+  <text class="th" x="36" y="46">设置 → ANB 工具 →「钉钉文档」面板结构示意</text>
   <text class="ts" x="36" y="72">示意图，非界面截图。实际面板配色与排版以运行版本为准。</text>
   <line x1="36" y1="92" x2="1164" y2="92" stroke="#D7E5F7" stroke-width="1.5"/>
 
@@ -33,18 +33,19 @@
     <text x="68" y="233">模型</text>
     <rect class="chip" x="52" y="254" width="208" height="36" rx="8"/>
     <text x="68" y="277">工具</text>
-    <rect class="chip" x="52" y="298" width="208" height="36" rx="8"/>
-    <text x="68" y="321">IM机器人</text>
+    <rect class="hi" x="52" y="298" width="208" height="36" rx="8"/>
+    <text x="68" y="321" font-weight="700" fill="#0B5FD9">ANB 工具</text>
+    <text class="ts" x="196" y="321">order 16</text>
 
-    <rect class="hi" x="52" y="342" width="208" height="36" rx="8"/>
-    <text x="68" y="365" font-weight="700" fill="#0B5FD9">钉钉文档</text>
-    <text class="ts" x="196" y="365">order 22</text>
+    <rect class="chip" x="52" y="342" width="208" height="36" rx="8"/>
+    <text x="68" y="365">IM机器人</text>
   </g>
 
   <!-- 右：面板主体 -->
   <rect class="card" x="300" y="116" width="864" height="608" rx="12"/>
-  <text class="th" x="324" y="150">钉钉文档</text>
-  <text class="ts" x="324" y="176">账号绑定 · AI 表格清单 · 定时导出</text>
+  <text class="th" x="324" y="150">ANB 工具</text>
+  <text class="ts" x="470" y="150">AI原生突围</text>
+  <text class="ts" x="324" y="176">标签：AI垃圾过滤 · MCP 客户端 · 钉钉文档（当前） · 出口代理</text>
 
   <!-- 区 1 账号绑定 -->
   <rect class="zone" x="324" y="196" width="816" height="128" rx="10"/>

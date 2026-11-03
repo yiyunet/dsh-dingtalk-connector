@@ -29,7 +29,7 @@
 ## 简介
 
 一个 DSH 插件，把**钉钉 AI 表格**（多维表 / aitable）接到 DeepSeek Harness 上。装完即得
-**10 个 `dingtalk_aitable_*` 工具**和一个**「钉钉文档」设置面板**——在 Harness 里直接发现 Base、
+**10 个 `dingtalk_aitable_*` 工具**和一个**「ANB 工具 → 钉钉文档」面板**——在 Harness 里直接发现 Base、
 读数据表、按条件查记录、批量写回、导出带 BOM 的中文 CSV，并支持**定时导出**。
 
 **架构**：包装钉钉官方 `dws`（`dingtalk-workspace-cli`）执行 `dws aitable ...`，
@@ -44,10 +44,10 @@
 
 ## 界面
 
-<img src="docs/images/panel-schematic.svg" alt="设置面板「钉钉文档」结构示意" width="100%">
+<img src="docs/images/panel-schematic.svg" alt="设置 → ANB 工具 →「钉钉文档」结构示意" width="100%">
 
-> 上图为**面板结构示意（非截图）**。设置 → 「钉钉文档」（order 22，排在「IM机器人」之后），
-> 内含三区：**账号绑定 / AI 表格清单 / 定时导出**。
+> 上图为**面板结构示意（非截图）**。设置 → **ANB 工具**（壳 order 16）→ 标签栏里的
+> **「钉钉文档」**（壳内 order 10），内含三区：**账号绑定 / AI 表格清单 / 定时导出**。
 > 真实截图待补，清单与打码要求见 [docs/images/README.md](docs/images/README.md)。
 
 ## 能力一览
@@ -228,9 +228,13 @@ dwsEntry: '<npm root -g>/dingtalk-workspace-cli/bin/dws.js'
 
 ---
 
-## 五之二、设置面板「钉钉文档」
+## 五之二、设置面板「ANB 工具 → 钉钉文档」
 
-在 **设置** 里出现一级项 **「钉钉文档」**（order 22，排在「IM机器人」之后）。
+面板归到 **设置 → ANB 工具** 下的标签栏里（壳 order 16，本标签在壳内 order 10）。
+
+「ANB 工具」壳由本包**内置**，**不是**一个需要额外安装的包：装任一 ANB 系列插件，壳就自带。
+多个 ANB 插件同时装时**只有一个壳**（运行时单例）——谁先起来谁登记，其余让位；
+登记者被禁用后由下一个 ANB 插件接管，标签栏依次列出各面板。
 
 ### 面板做三件事
 
@@ -475,7 +479,8 @@ npm run check        # build && test && verify   ← CI 跑的就是这一条
 2. **任何依赖节与 lock 文件都不得出现 `@deepseek-ai/dsh-*`** —— DSH 运行时包用**模块局部 Symbol**
    做 key，装第二份物理副本会破坏 Host 查找
 3. 客户端产物注册了正确的装载器 id
-4. 客户端产物注册了正确的设置面板契约（id / order / label / 挂载点）
+4. 客户端产物**自带 ANB 工具壳**，并把面板注册进壳：壳挂载点 `settings.section`
+   （`SHELL_ID='anb-toolbox'`，order 16）／面板挂载点 `anb.tool.tab`（order 10）／label
 5. 客户端产物不含 ESM 顶层语法（它是产物，不是源码）
 6. **RPC 端点名在宿主源、客户端源、客户端产物三处一致**（曾因信封形状不一致导致面板空壳而 RPC 不报错）
 7. 全仓不含个人绝对路径与凭证赋值

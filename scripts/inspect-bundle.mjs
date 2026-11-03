@@ -22,7 +22,8 @@ const MARKERS = [
   { label: 'esbuild 全局名', ascii: '__DshDingtalkConnector', why: 'wrapper 靠它取到内联实现' },
   { label: '装载器 id', ascii: '@yiyunet/dsh-dingtalk-connector', why: '平台模块系统按它注册' },
   { label: '面板 id 与 RPC 端点名', ascii: 'dsh-dingtalk-connector', why: '两处同为这个名字，三处必须一致' },
-  { label: '面板挂载点', ascii: 'settings.section', why: '设置面板注册用的 name' },
+  { label: '壳挂载点', ascii: 'settings.section', why: 'ANB 工具壳注册用的 name（没有壳时由本包补一个）' },
+  { label: '面板挂载点', ascii: 'anb.tool.tab', why: '本面板注册进壳的标签账本用的 slot' },
   { label: '面板 label（中文）', text: '钉钉文档', why: '设置里显示的标题；最容易被 esbuild 转义的一项' },
   { label: '默认导出目录字段', ascii: 'defaultExportDir', why: '宿主下发、客户端读取（防硬编码个人路径）' },
 ]

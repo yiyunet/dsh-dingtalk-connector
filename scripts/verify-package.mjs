@@ -8,7 +8,7 @@
  *   ② 任何依赖节与 lock 文件都不得出现 @deepseek-ai/dsh-*
  *      —— DSH 运行时包用**模块局部 Symbol** 做 key，装第二份物理副本会破坏 Host 查找
  *   ③ 客户端产物必须注册正确的装载器 id
- *   ④ 客户端产物必须注册正确的设置面板契约（id / order / label）
+ *   ④ 客户端产物必须自带 ANB 工具壳，并把面板注册进壳（壳挂载点 / 面板挂载点 / id / order / label）
  *   ⑤ 客户端产物不得含 ESM 语法（lib/ 是 esbuild 产物，不是源码）
  *   ⑥ RPC 端点名在宿主真源、客户端真源、客户端产物三处必须一致
  *      —— 曾因响应信封形状不一致导致面板渲染空壳而 RPC 不报错，端点名漂移同理致命
@@ -155,10 +155,22 @@ if (clientBundle === undefined) {
 
   check(panelAndRpcPresent,
     `lib/client.js 未注册设置面板 id / RPC 端点名（应为 dsh-dingtalk-connector）${bundleSizeHint}`)
-  check(/\border\s*:\s*22\b/u.test(decodeEscapes(clientBundle)),
-    `lib/client.js 的设置面板 order 不是 22（与官方 IM 面板 order=21 的排序约定）${bundleSizeHint}`)
+  check(/\border\s*:\s*10\b/u.test(decodeEscapes(clientBundle)),
+    `lib/client.js 的设置面板 order 不是 10（壳内标签顺序：本面板 10 → 20 → 30 → 出口代理 40）${bundleSizeHint}`)
   check(containsMarker(clientBundle, 'settings.section'),
-    `lib/client.js 未注册设置面板挂载点（settings.section）${bundleSizeHint}`)
+    `lib/client.js 未自带 ANB 工具壳（settings.section / anb-toolbox）${bundleSizeHint}`)
+  check(containsMarker(clientBundle, 'anb.tool.tab'),
+    `lib/client.js 未把面板注册进 ANB 壳（anb.tool.tab）${bundleSizeHint}`)
+  // 壳的身份与外观：只断**字符串值**，不断声明形式 ——
+  // `lib/client.js` 是 esbuild 产物，顶层 `const` 会被合并降级成 `var`、单引号也会被换成双引号，
+  // 按 `const SHELL_ID = 'anb-toolbox'` 这种源码字面量匹配必然误红（1.1.0 发布前就踩过一次）。
+  // 行为正确性（壳恰好一个 / order / children / 让位）由 test/client.test.mjs 真跑 apply 保证。
+  check(containsMarker(clientBundle, 'anb-toolbox'),
+    `lib/client.js 里找不到壳标识 anb-toolbox —— 壳块被删了，或产物过期${bundleSizeHint}`)
+  check(containsMarker(clientBundle, 'ANB 工具'),
+    `lib/client.js 里找不到壳标题「ANB 工具」${bundleSizeHint}${escapeHint}`)
+  check(containsMarker(clientBundle, 'AI原生突围'),
+    `lib/client.js 里找不到壳标题旁的小字「AI原生突围」${bundleSizeHint}${escapeHint}`)
   check(containsMarker(clientBundle, '钉钉文档'),
     `lib/client.js 未注册设置面板 label「钉钉文档」${bundleSizeHint}${escapeHint}`)
 
@@ -358,4 +370,4 @@ if (failures.length > 0) {
   console.error('\n八类断言：必需文件 / 依赖禁则 / 装载器 id / 面板契约 / 产物无 ESM 语法 / RPC 端点一致 / 敏感信息 / 发布白名单自洽')
   process.exit(1)
 }
-console.log('✓ 发布契约校验通过（必需文件 · 依赖禁则 · 装载器 id · 面板契约 · 产物无 ESM · RPC 端点一致 · 敏感信息 · 发布白名单自洽）')
+console.log('✓ 发布契约校验通过（必需文件 · 依赖禁则 · 装载器 id · 面板契约（壳 settings.section / 面板 anb.tool.tab · order 10 / 钉钉文档） · 产物无 ESM · RPC 端点一致 · 敏感信息 · 发布白名单自洽）')

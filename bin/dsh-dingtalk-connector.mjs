@@ -92,7 +92,7 @@ async function install(profile) {
   }
   console.log('\n→ 核对配置层：')
   await run('dsh', ['--profile', profile, '--dump-config'])
-  console.log('\n✓ 装好了。请重启 dsh（如 dsh web），然后在「设置 → 钉钉文档」里绑定账号。')
+  console.log('\n✓ 装好了。请重启 dsh（如 dsh web），然后在「设置 → ANB 工具 → 钉钉文档」里绑定账号。')
 }
 
 async function doctor() {

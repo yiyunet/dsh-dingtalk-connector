@@ -241,7 +241,8 @@ async function buildClient() {
   const required = [
     { label: 'esbuild 全局名', needle: CLIENT_GLOBAL },
     { label: '装载器 id', needle: '@yiyunet/dsh-dingtalk-connector' },
-    { label: '面板契约', needle: 'settings.section' },
+    { label: '壳挂载点', needle: 'settings.section' },
+    { label: '面板挂载点', needle: 'anb.tool.tab' },
     { label: '面板 label', needle: '钉钉文档' },
     { label: 'RPC 端点名', needle: 'dsh-dingtalk-connector' },
   ]
