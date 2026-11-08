@@ -14,7 +14,7 @@
  * 由 factory 的 require 在运行时解析。
  */
 window.__ModuleLoader__.load({
-  id: '@yiyunet/dsh-dingtalk-connector',
+  id: 'dsh-dingtalk-connector',
   factory: (require) => {
     var module = { exports: {} }
     var exports = module.exports

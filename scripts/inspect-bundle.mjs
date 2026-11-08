@@ -20,7 +20,7 @@ const TARGET = resolve(ROOT, 'lib', 'client.js')
 /** 关键标记：每条都是"发布契约里必须成立"的事实，附带它能证明什么。 */
 const MARKERS = [
   { label: 'esbuild 全局名', ascii: '__DshDingtalkConnector', why: 'wrapper 靠它取到内联实现' },
-  { label: '装载器 id', ascii: '@yiyunet/dsh-dingtalk-connector', why: '平台模块系统按它注册' },
+  { label: '装载器 id', ascii: 'dsh-dingtalk-connector', why: '平台模块系统按它注册' },
   { label: '面板 id 与 RPC 端点名', ascii: 'dsh-dingtalk-connector', why: '两处同为这个名字，三处必须一致' },
   { label: '壳挂载点', ascii: 'settings.section', why: 'ANB 工具壳注册用的 name（没有壳时由本包补一个）' },
   { label: '面板挂载点', ascii: 'anb.tool.tab', why: '本面板注册进壳的标签账本用的 slot' },

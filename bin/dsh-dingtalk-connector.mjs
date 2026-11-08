@@ -2,9 +2,9 @@
 /**
  * CLI 引导：把本插件装进指定 DSH profile，或做一次环境体检。
  *
- *   npx @yiyunet/dsh-dingtalk-connector install [--profile web]
- *   npx @yiyunet/dsh-dingtalk-connector doctor
- *   npx @yiyunet/dsh-dingtalk-connector --help
+ *   npx dsh-dingtalk-connector install [--profile web]
+ *   npx dsh-dingtalk-connector doctor
+ *   npx dsh-dingtalk-connector --help
  *
  * 设计原则：**不替用户改配置**。install 只调用 dsh 官方命令并回显结果，
  * 需要用户决策的地方（开写门禁、设 exportRoot）只提示、不代劳。
@@ -13,7 +13,7 @@ import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
 
 const require = createRequire(import.meta.url)
-const SELF = '@yiyunet/dsh-dingtalk-connector'
+const SELF = 'dsh-dingtalk-connector'
 const manifest = require('../package.json')
 
 /** 跑一条命令并把输出直通给用户。 */

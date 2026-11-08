@@ -240,7 +240,7 @@ async function buildClient() {
 
   const required = [
     { label: 'esbuild 全局名', needle: CLIENT_GLOBAL },
-    { label: '装载器 id', needle: '@yiyunet/dsh-dingtalk-connector' },
+    { label: '装载器 id', needle: 'dsh-dingtalk-connector' },
     { label: '壳挂载点', needle: 'settings.section' },
     { label: '面板挂载点', needle: 'anb.tool.tab' },
     { label: '面板 label', needle: '钉钉文档' },
@@ -288,8 +288,8 @@ async function buildClient() {
     )
   }
 
-  if (!registrations.some(item => item?.id === '@yiyunet/dsh-dingtalk-connector')) {
-    throw new Error('lib/client.js 执行后没有注册 @yiyunet/dsh-dingtalk-connector —— 装载器契约被破坏')
+  if (!registrations.some(item => item?.id === 'dsh-dingtalk-connector')) {
+    throw new Error('lib/client.js 执行后没有注册 dsh-dingtalk-connector —— 装载器契约被破坏')
   }
 
   // ② factory 必须能物化出插件面（apply），顺带记录它 require 了哪些外部模块

@@ -18,7 +18,7 @@ import { runInNewContext } from 'node:vm'
 const ROOT = resolve(import.meta.dirname, '..')
 const BUNDLE = resolve(ROOT, 'lib', 'client.js')
 
-const LOADER_ID = '@yiyunet/dsh-dingtalk-connector'
+const LOADER_ID = 'dsh-dingtalk-connector'
 const SHELL_SECTION = 'settings.section'
 const SHELL_SLOT = 'anb.tool.tab'
 const SHELL_ID = 'anb-toolbox'

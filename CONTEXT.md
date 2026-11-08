@@ -1,6 +1,6 @@
 # DeepSeek Harness · 钉钉 AI 表格连接器
 
-本上下文描述 `@yiyunet/dsh-dingtalk-connector` 如何把钉钉 AI 表格的数据搬进 Harness，
+本上下文描述 `dsh-dingtalk-connector` 如何把钉钉 AI 表格的数据搬进 Harness，
 以及过程中**哪些词是精确的、哪些词不能用**。
 
 > 为什么要有这份文件：本插件有几个概念用一个词就会被误解（例如"定时任务"其实**不是**云端定时），

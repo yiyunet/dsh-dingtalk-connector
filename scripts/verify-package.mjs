@@ -150,8 +150,8 @@ if (clientBundle === undefined) {
   // 客户端侧的面板 id 与 RPC 端点名同为 'dsh-dingtalk-connector'，此处只断一次存在性即可。
   const panelAndRpcPresent = containsMarker(clientBundle, 'dsh-dingtalk-connector')
 
-  check(containsMarker(clientBundle, '@yiyunet/dsh-dingtalk-connector'),
-    `lib/client.js 未注册装载器 id（应为 @yiyunet/dsh-dingtalk-connector）${bundleSizeHint}`)
+  check(containsMarker(clientBundle, 'dsh-dingtalk-connector'),
+    `lib/client.js 未注册装载器 id（应为 dsh-dingtalk-connector）${bundleSizeHint}`)
 
   check(panelAndRpcPresent,
     `lib/client.js 未注册设置面板 id / RPC 端点名（应为 dsh-dingtalk-connector）${bundleSizeHint}`)

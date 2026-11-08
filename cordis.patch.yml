@@ -1,4 +1,4 @@
-# @yiyunet/dsh-dingtalk-connector —— profile 组合层
+# dsh-dingtalk-connector —— profile 组合层
 #
 # 本插件包装钉钉官方 `dws`（dingtalk-workspace-cli）执行 `dws aitable ...`，
 # 与钉钉官方 OpenClaw connector 同构（其仓库 skills/dws-cli/ 即此路线）。
@@ -6,7 +6,7 @@
 # ⚠️ 绝不要把 Client Secret 写在本文件里。凭证走环境变量（见 clientIdEnv 说明）。
 - insert:
     - id: dingtalk-connector
-      name: '@yiyunet/dsh-dingtalk-connector'
+      name: 'dsh-dingtalk-connector'
       config:
         # ── dws 可执行入口 ──────────────────────────────────────────────
         # dwsCommand：PATH 上的命令名。Windows 下 .cmd 需经 shell，参数会被 shell 解释，

@@ -143,13 +143,23 @@ const SH = {
   intro: { opacity: 0.72, fontSize: 12, margin: '0 0 14px' },
   link: { color: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 },
   empty: { opacity: 0.72, fontSize: 13 },
-  tabs: { display: 'flex', gap: 2, borderBottom: '1px solid var(--dsh-border, #e3e5e8)', marginBottom: 12 },
-  tab: {
-    padding: '6px 12px', fontSize: 13, background: 'transparent', border: 'none',
-    borderBottom: '2px solid transparent', color: 'inherit', opacity: 0.7,
-    cursor: 'pointer', marginBottom: -1,
+  // 文件夹式标签栏：`flex-wrap` 让一排放不下时自动折成多排，每排都坐在自己的基线上。
+  tabs: {
+    display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 4,
+    padding: '0 6px', borderBottom: '1px solid var(--dsh-border, #e3e5e8)', marginBottom: 12,
   },
-  tabActive: { opacity: 1, borderBottomColor: 'var(--dsh-accent, #3b6cf0)' },
+  tab: {
+    padding: '6px 14px', fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap',
+    background: 'rgba(127, 127, 127, 0.10)',
+    border: '1px solid var(--dsh-border, #e3e5e8)', borderBottom: 'none',
+    borderRadius: '8px 8px 0 0', color: 'inherit', opacity: 0.72,
+  },
+  tabActive: {
+    opacity: 1, fontWeight: 600,
+    // 与内容区同色并下压 1px，盖住栏底那条分隔线 —— 这就是"文件夹的当前页"。
+    background: 'var(--dsh-bg, Canvas)', borderBottom: '1px solid var(--dsh-bg, Canvas)',
+    marginBottom: -1,
+  },
   panel: {},
 }
 

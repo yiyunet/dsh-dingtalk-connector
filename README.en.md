@@ -1,345 +1,223 @@
-<p align="center">
-  <img src="assets/logo-readme.svg" alt="dsh-dingtalk-connector — DingTalk AI Tables × DeepSeek Harness" width="560" align="middle">
-</p>
+# dsh-dingtalk-connector
+
+**Bring DingTalk AI Table data into DeepSeek Harness.**
+
+MIT · independent community plugin · **not affiliated with, sponsored by, or endorsed by DingTalk or DeepSeek**
+[Security and boundaries](#security-and-boundaries) · [Update and uninstall](#update-and-uninstall)
+
+[中文](README.md) | English
 
 ---
 
-<div align="center">
-  <p><strong>Read and write DingTalk AI Tables from DeepSeek Harness</strong></p>
-  <p><strong>让钉钉 AI 表格的数据，流进 DeepSeek Harness</strong></p>
+## What this is, and whether it fits you
 
-  <p>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>
-    <img src="https://img.shields.io/badge/node-%3E%3D22.19-brightgreen.svg" alt="Node >= 22.19">
-    <img src="https://img.shields.io/badge/agent-DeepSeek%20Harness-5865f2" alt="DeepSeek Harness">
-    <img src="https://img.shields.io/badge/DingTalk-AI%20Tables-1677FF" alt="DingTalk AI Tables">
-  </p>
+A DSH plugin that connects **DingTalk AI Tables** (multi-dimensional tables / aitable) to DeepSeek Harness. Once installed you get **10 `dingtalk_aitable_*` tools** and a **"ANB 工具 → 钉钉文档" panel** — discover Bases, read tables, query records by condition, write in batches, export Chinese CSV with a BOM, and schedule exports, all from inside Harness.
 
-  <p>
-    <img src="https://img.shields.io/badge/dws-%E2%89%A5%201.0.6-1677FF" alt="requires dws >= 1.0.6">
-    <img src="https://img.shields.io/badge/dws%20license-Apache--2.0-blue" alt="dws is Apache-2.0">
-    <img src="https://img.shields.io/badge/tools-10-success" alt="10 tools">
-  </p>
+**Architecture**: it wraps the official DingTalk `dws` CLI (`dingtalk-workspace-cli`) and runs `dws aitable ...` — it **never talks to REST directly**. This mirrors DingTalk's own OpenClaw connector, which also injects `DWS_CLIENT_ID/SECRET` and calls `dws` (**measured**, 2026-09-14, by reading its repository).
 
-  <p><a href="README.md">简体中文</a> · <strong>English</strong></p>
-</div>
+**Design stance**: **read-first + write gates**. Writes and deletes are off by default, and deletes additionally need a per-call confirmation. One extra confirmation is cheaper than an accidental combination of "model hallucination plus excessive permission".
 
----
+> **This is not a self-contained plugin** — it depends on the external `dws` CLI. **Three layers of dependency (Node / dws / DingTalk-side authorization) — all required.**
 
-## Overview
+## Three things to read first
 
-A DSH plugin that connects **DingTalk AI Tables** (multi-dimensional tables / aitable) to DeepSeek Harness.
-Once installed you get **10 `dingtalk_aitable_*` tools** plus a **"ANB 工具 → 钉钉文档" panel** — discover Bases,
-inspect tables, query records by condition, batch-write rows, export BOM-prefixed CSVs readable by Excel,
-and **schedule recurring exports**.
+> These are the three most commonly misunderstood points.
 
-**Architecture**: this plugin wraps the official DingTalk `dws` CLI (`dingtalk-workspace-cli`) and runs
-`dws aitable ...` commands. It is **isomorphic** to DingTalk's own OpenClaw connector — that connector also
-does not talk to the REST API directly; it injects `DWS_CLIENT_ID` / `DWS_CLIENT_SECRET` and calls `dws`
-(**measured**, 2026-09-14, by reading its repository).
+1. **The scheduler runs inside the DSH host process** — it does not run while DSH is closed, and the next trigger is recomputed after a restart. It is **not** a cloud scheduler.
+2. **DingTalk has no "list every Base" API** — a scan produces "candidates ∪ manual entries" and **is not exhaustive**; `base search`'s `hasMore: true` is a **false positive** (cursor paging does not work).
+3. **Write and delete gates are off by default** — deletes additionally require `confirm=true` every time.
 
-**Design stance**: **read-first with a write gate**. Writes and deletes are off by default, and every delete
-needs a per-call confirmation. We would rather add one confirmation step than leave "model hallucination ×
-over-broad permissions" as a viable combination.
+> Every technical claim here carries a source tier: **measured** / **official documentation** / **inferred**, with the date it was obtained.
 
-> **⚠️ This is not a self-contained plugin** — it depends on the external `dws` CLI.
-> Read [docs/安装与前置条件.md](docs/安装与前置条件.md) first (Chinese): there are **three dependency layers
-> (Node / dws / DingTalk-side authorization) and all three are mandatory**.
+## What it guarantees, and what it does not
 
-## Screenshots
+| | Content |
+|---|---|
+| **Guarantees** | Tools run on the official CLI's command surface (endpoints, auth and paging belong to `dws`); writes and deletes are unavailable by default; CSV carries a BOM and the first 3 bytes are read back as proof; panel availability is self-evident from `rpcEndpoint.registered` in `diagnose` |
+| **Does not guarantee** | That a scan finds every Base in your organization (DingTalk has no such API); that the model will not misbehave (gates reduce exposure, they do not remove risk); behavior after DingTalk API changes (it follows the `dws` version) |
+| **The official warning still applies** | DingTalk's own connector states that model hallucination, uncontrolled execution and prompt injection are inherent risks, and advises **against deploying directly in production enterprise environments** |
 
-<img src="docs/images/panel-schematic.svg" alt="Settings → ANB 工具 → 钉钉文档 — structural diagram" width="100%">
-
-> The image above is a **structural diagram, not a screenshot**. Settings → **ANB 工具** (shell order 16) →
-> the **"钉钉文档"** tab (order 10 inside the shell) contains three areas:
-> **account binding / AI Table list / scheduled export**.
-> Real screenshots are still pending — see [docs/images/README.md](docs/images/README.md) for the shot list
-> and the redaction requirements.
-
-## Capabilities
-
-| Capability | Tool | Write gate |
-|---|---|---|
-| Self-check (version / auth / commands / RPC endpoint) | `dingtalk_aitable_diagnose` | — |
-| Base files: list / search / get / create / update / delete | `dingtalk_aitable_base` | delete needs both locks |
-| Tables: get (with fields) / create / update / delete | `dingtalk_aitable_table` | delete needs both locks |
-| Fields: get / create / update / delete | `dingtalk_aitable_field` | delete needs both locks |
-| Records: query by ID or condition (full pull supported) | `dingtalk_aitable_record_query` | — |
-| Records: batch create / update / delete | `dingtalk_aitable_record_write` | write / delete gate |
-| Controlled passthrough (any registered subcommand) | `dingtalk_aitable_raw` | dangerous ops need both locks |
-| Base discovery + **readability probe** | `dingtalk_aitable_scan` | — |
-| Full CSV export (**BOM-prefixed**, overwrites same name) | `dingtalk_aitable_export_csv` | — |
-| Scheduled export jobs: create / list / remove / toggle / run-now | `dingtalk_sync_job` | — |
-
-**Both locks** = `allowDelete: true` (config) **and** `confirm: true` (per call, meaning consent was given).
-
-## Read these three first
-
-> These three are the most commonly misunderstood. Read them before the details.
-
-> 1. **The scheduler lives inside the DSH host process** — it does not run while DSH is closed, and it
->    recomputes the next firing time on restart. It is **not** a cloud scheduler.
-> 2. **"Enumerate all Bases" is impossible on DingTalk's side** — `base list` only returns recently visited
->    Bases, `base search` returns ~4 items per call, and its `hasMore: true` is a **false positive**
->    (cursor paging does not work). Discovery therefore yields "candidates ∪ manual entries" and is
->    **not exhaustive**.
-> 3. **Write and delete gates are both off by default** — and deletes additionally need `confirm=true`
->    every single time.
-
-> Every technical claim in this README is either **measured on a real machine**, **quoted from official
-> documentation**, or explicitly marked as **inferred (推测)**. Claims carry the date they were obtained.
-
----
-
-## Why wrap `dws` instead of calling REST directly
-
-An earlier version called the AI Table REST API directly. It was abandoned: endpoint paths had to be
-inferred, and token refresh, pagination and error codes had to be reimplemented. Wrapping the official CLI
-removed all endpoint uncertainty and delegated auth/pagination to the vendor.
-
----
-
-## Prerequisites
-
-> **Full version (platform matrix, extraction dependencies, org-level blocking, one-shot verification
-> checklist)**: [docs/安装与前置条件.md](docs/安装与前置条件.md) (Chinese). Below is the quick-reference form.
-
-**Three dependency layers — all mandatory**:
+## Requirements (three layers, all required)
 
 | Layer | Requirement |
 |---|---|
-| ① Host runtime | **Node ≥ 22.19** (this plugin); DSH `0.1.2-alpha.4` – `0.1.5-alpha.1` |
-| ② `dws` CLI | `npm i -g dingtalk-workspace-cli`, **version ≥ 1.0.6** (measured baseline `v1.0.61`) |
-| ③ DingTalk side | Authorization **+** the "AI Table record read/write" scope **+** the app added as a Base collaborator (editable) **★most commonly missed** |
+| ① Local runtime | **Node ≥ 22.19**; DSH `0.1.2-alpha.4` ~ `0.1.5-alpha.1` |
+| ② dws CLI | `npm i -g dingtalk-workspace-cli`, **version ≥ 1.0.6** (measured baseline `v1.0.61`) |
+| ③ DingTalk side | Authorization ＋ the "AI Table record read/write" permission ＋ **adding the app as a Base collaborator with edit rights ★most often missed** |
 
-### 1. Install `dws` (on your machine)
+### 1 Install dws
 
 ```sh
 npm i -g dingtalk-workspace-cli
-dws --version          # must be >= 1.0.6; measured baseline v1.0.61
-npm root -g            # note the prefix — on Windows you need it for dwsEntry
+dws --version          # must be >= 1.0.6
+npm root -g            # note the prefix; on Windows you need it for dwsEntry
 ```
 
-> ⚠️ `dws` is **not a pure JS package** — it ships a `postinstall` hook that **downloads and extracts a
-> platform-native binary** (about 25 MB). It supports Windows / macOS / Linux on both x64 and arm64.
-> Extraction depends on the platform: `powershell.exe` on Windows, `tar` or `unzip` on macOS / Linux.
+> ⚠️ `dws` is **not a pure JS package** — it ships a `postinstall` that **downloads and unpacks a platform-native binary** (~25 MB), covering Windows / macOS / Linux on x64 and arm64. Unpacking needs the system `powershell.exe` on Windows, and `tar` or `unzip` on macOS / Linux. Full matrix in [docs/安装与前置条件.md](docs/安装与前置条件.md).
 
-### 2. Authorize (pick one)
+### 2 Authorize (pick one)
 
-**Option A — device flow (interactive)**
+**Option A — device-code login (interactive)**
+
 ```sh
-dws auth login         # scan with the DingTalk app; tokens auto-refresh
-dws auth status        # confirm you are logged in
+dws auth login         # scan with the DingTalk app; tokens refresh automatically (access 2h / refresh 30d)
+dws auth status        # confirm login
 ```
 
-**Option B — reuse your DingTalk app credentials (headless; recommended for servers)**
+**Option B — reuse app credentials (headless / recommended for servers)**
+
 ```sh
-export DWS_CLIENT_ID=<your client id>
-export DWS_CLIENT_SECRET=<your client secret>
+# Windows
+set DWS_CLIENT_ID=<your Client ID>
+set DWS_CLIENT_SECRET=<your Client Secret>
+# macOS / Linux
+export DWS_CLIENT_ID=<your Client ID>
+export DWS_CLIENT_SECRET=<your Client Secret>
+
 dws auth login
 ```
-Credential precedence: `--token` > `DWS_CLIENT_ID`/`DWS_CLIENT_SECRET` > OAuth encrypted store.
 
-### 3. Grant permissions (**easy to miss; you will get 403 without this**)
+> Credential precedence: `--token` > `DWS_CLIENT_ID/SECRET` > the OAuth encrypted store. Credentials reach the child process **only through environment variables**, never as command-line arguments (so they never show up in a process list).
 
-1. **DingTalk developer console** → your app → Permission management → enable **AI Table record read/write**
-   → **publish** so the change takes effect.
-2. **The target Base** → share/collaborate → add that app as a collaborator with **edit** rights.
+### 3 Grant permissions (**easy to miss; missing means 403**)
 
-> Both steps are required. If `dws` reports `permission denied` / 403, this is the cause 9 times out of 10.
+1. **DingTalk developer console** → the app → permission management → enable **AI Table (multi-dimensional table) record read/write** → **publish**.
+2. **Target Base** → top-right "collaborate/share" → add the app as a collaborator with **edit** rights.
 
----
+> Both are required. When `dws` reports `permission denied` or 403, nine times out of ten this step is incomplete.
 
 ## Install
 
 ```sh
-# from npm
-dsh plugin --profile web add @yiyunet/dsh-dingtalk-connector
+# From npm
+dsh plugin --profile web add dsh-dingtalk-connector
 
-# or from a local checkout
-dsh plugin --profile web add "<absolute path to this repo>"
+# Or from a local path (during development)
+dsh plugin --profile web add "<absolute path to this repository>"
 
-# verify the config layer shows up, then restart dsh web
-dsh --profile web --dump-config
+dsh --profile web --dump-config          # expect a dingtalk-connector layer
 ```
 
-A helper CLI is bundled:
+Then restart `dsh web`. A guided CLI is bundled:
 
 ```sh
-npx @yiyunet/dsh-dingtalk-connector install [--profile web]
-npx @yiyunet/dsh-dingtalk-connector doctor
+npx dsh-dingtalk-connector install [--profile web]   # install + verify the config layer
+npx dsh-dingtalk-connector doctor                    # check dsh / dws / Node / auth state
 ```
 
----
+**To remove it**: see [Update and uninstall](#update-and-uninstall).
 
-## Configuration (`cordis.patch.yml`)
+## Quick start: export one table into a usable CSV
+
+Installing is not the same as working. The endpoint of the four steps below is **a Chinese CSV that opens correctly in Excel**.
+
+1. **What you provide** — a keyword (to discover the Base) or a known `baseId`, plus an absolute output path.
+2. **What you do** — run `dingtalk_aitable_diagnose` first; then `dingtalk_aitable_scan(keywords="...", withTables=true)` to obtain `baseId` and `tableId`; then `dingtalk_aitable_export_csv(baseId, tableId, outputPath="<absolute path>.csv")`.
+3. **Where the result appears** — the file lands at `outputPath`, headers use the Chinese field names, and the file starts with `\uFEFF`.
+4. **How to know it is right** — **open it in Excel and confirm the Chinese is not garbled** (the only visible proof the BOM works); headers match what you see in DingTalk; row count matches. **If anything differs, reconcile first with `dingtalk_aitable_record_query(all=true)` — do not schedule it yet.**
+
+## Day-to-day use
+
+**Main line, end to end.** Scan for the table → export once to verify → create a scheduled job → it overwrites the same file daily.
+
+```
+① dingtalk_aitable_scan(keywords="kwA,kwB", withTables=true)
+      → candidate Bases + a readability probe for each (readable / failure reason)
+      → note the baseId + tableId you care about
+
+② dingtalk_aitable_export_csv(baseId, tableId, outputPath="<absolute path>.csv")
+      → export once; verify headers, encoding and row count
+
+③ dingtalk_sync_job(action="create", baseId, tableId,
+                    outputPath="<absolute path>.csv",
+                    frequency="daily", time="09:00", label="daily sales")
+      → exports and overwrites the same file every day at 09:00
+
+④ dingtalk_sync_job(action="list")                    # next trigger and last result
+   dingtalk_sync_job(action="run-now", id="<id>")     # run once now
+```
+
+**Shortest path from the second time on.** If the table has not changed, do nothing; to confirm the job is alive, call `dingtalk_sync_job(action="list")`.
+
+**⚠️ Three semantics you must know**
+
+1. **The scheduler runs inside the DSH host process**: it does **not** run while DSH is closed (an accepted semantic); the next trigger is recomputed after a restart.
+2. **"Enumerate every Base" is impossible on the DingTalk side**: `base list` returns only recently accessed items, and `base search` returns about 4 results per call with **non-working cursor paging**. A scan is therefore "multi-channel candidates ∪ manual entries" and **is not exhaustive** — supply more keywords, or add a `baseId` manually.
+3. **CSV must carry a BOM**: the plugin writes `\uFEFF` first, which is the only condition under which Excel decodes UTF-8 Chinese correctly. After writing, it **reads the first 3 bytes back** as proof (editors hide the BOM, and ripgrep strips it).
+
+## Settings panel
+
+**Entry**: **Settings → ANB 工具 → "钉钉文档"** (shell order 16; this tab is order 10 inside the shell).
+
+> The "ANB 工具" shell is **bundled with this package** — not something extra to install. Any ANB-family plugin brings the shell. When several are installed there is **only one shell** (a runtime singleton): whoever starts first registers it, the rest yield, and if the registrant is disabled the next ANB plugin takes over, with tabs listed in order.
+
+| Section | Content |
+|---|---|
+| **Account binding** | CLI version, organization / user name, access-token expiry, credential source, write-gate state; plus the device-code binding session (QR code / deep link / raw output / organization-blocked notice) |
+| **AI Table list** | Keyword → scan (candidate discovery + **readability probe**) → each Base marked readable / not readable → expand to tables → select one → **copy Base ID / Table ID** |
+| **Scheduled export** | Selected table + output path + daily/weekly + time → create a job; the table shows next and last result, with **run now / enable / disable / delete** |
+
+Panel self-proof: `dingtalk_aitable_diagnose` returns `rpcEndpoint`; `registered: true` means the RPC endpoint is mounted.
+
+### Configuration (`cordis.patch.yml`)
 
 | Key | Default | Meaning |
 |---|---|---|
-| `dwsCommand` | `dws` | Executable name on `PATH` |
-| `dwsEntry` | — | **Recommended on Windows**: absolute path to the dws JS entry. When set, the plugin spawns `node` directly and **never goes through a shell**, so quotes and `&` / `\|` inside record text are safe |
-| `timeoutMs` | `60000` | Per-command timeout |
-| `clientIdEnv` / `clientSecretEnv` | `DWS_CLIENT_ID` / `DWS_CLIENT_SECRET` | Credential env var names |
-| `allowWrite` | **false** | Gate for `create` / `update` |
-| `allowDelete` | **false** | Gate for `delete` (separate, and each call still needs `confirm=true`) |
-| `maxBatch` | `30` | Max records per batch |
-| `exportRoot` | — | Optional. Confines CSV output to one directory |
-| `defaultExportDir` | — | Optional. Directory pre-filled in the panel when you pick a table |
-| `scanConcurrency` | `4` | Concurrency for readability probing |
+| `dwsCommand` | `dws` | Command name on PATH |
+| `dwsEntry` | none | **Recommended on Windows**: absolute path to dws's JS entry. When set, the plugin spawns node directly and **never goes through a shell** |
+| `timeoutMs` | 60000 | Per-command timeout |
+| `clientIdEnv` / `clientSecretEnv` | `DWS_CLIENT_ID` / `DWS_CLIENT_SECRET` | Credential environment-variable names |
+| `allowWrite` | **false** | Switch for create / update |
+| `allowDelete` | **false** | Switch for delete (separate, and still needs `confirm=true` each time) |
+| `maxBatch` | 30 | Per-batch limit (the official connector specifies ≤30) |
+| `exportRoot` | none | Optional: **restrict** export destinations to one directory |
+| `defaultExportDir` | none | Optional: directory auto-filled by the panel after selecting a table |
+| `scanConcurrency` | 4 | Concurrency for the readability probe (rate-limit protection) |
 
-### About `dwsEntry` (a Windows security detail)
-
-On Windows a `.cmd` must be started through a shell, and the shell interpolates metacharacters in
-arguments — record text containing quotes or `&` / `|` could be injected. The plugin **hard-rejects** such
-calls (returns `ARG_UNSAFE` with guidance). The definitive fix is to point `dwsEntry` at dws's JS entry:
+**About `dwsEntry` (a Windows security point)**: on Windows a `.cmd` must go through a shell, and the shell interprets metacharacters — record text containing quotes or `&`/`|` could be injected. The plugin **hard-rejects** this (returns `ARG_UNSAFE` with guidance). The full fix is to point `dwsEntry` at dws's JS entry:
 
 ```yaml
 dwsEntry: '<npm root -g>/dingtalk-workspace-cli/bin/dws.js'
 ```
 
-Use `npm root -g` to find the actual prefix on your machine.
-
----
-
 ## The ten tools
 
 | Tool | Purpose | Gate |
 |---|---|---|
-| `dingtalk_aitable_diagnose` | **Self-check**: dws version / auth status / registered commands | none |
-| `dingtalk_aitable_base` | Base file: list / search / get / create / update / delete | delete needs both locks |
-| `dingtalk_aitable_table` | Table: get (**must pass `tableIds` to get fields**) / create / update / delete | delete needs both locks |
-| `dingtalk_aitable_field` | Field: get / create / update / delete | delete needs both locks |
-| `dingtalk_aitable_record_query` | **Read records** (by id or by filter; `all=true` for full pull) | none |
+| `dingtalk_aitable_diagnose` | **Self-check**: dws version / auth state / registered commands / RPC endpoint | none |
+| `dingtalk_aitable_base` | Base files: list / search / get / create / update / delete | delete needs the double lock |
+| `dingtalk_aitable_table` | Tables: get (**`tableIds` is required to return fields**) / create / update / delete | delete needs the double lock |
+| `dingtalk_aitable_field` | Fields: get / create / update / delete | delete needs the double lock |
+| `dingtalk_aitable_record_query` | **Read records** (by id or condition; `all=true` for a full pull) | none |
 | `dingtalk_aitable_record_write` | Write records: create / update / delete | write / delete gates |
-| `dingtalk_aitable_raw` | Controlled passthrough to any registered subcommand | destructive commands need both locks |
-| `dingtalk_aitable_scan` | Discover candidate Bases + **readability probing** | none |
-| `dingtalk_aitable_export_csv` | Full export to CSV (**BOM**, Chinese field names as headers, overwrites same name) | none (optionally bounded by `exportRoot`) |
+| `dingtalk_aitable_raw` | Controlled pass-through to any registered subcommand | dangerous commands need the double lock |
+| `dingtalk_aitable_scan` | Candidate discovery + **readability probe** | none |
+| `dingtalk_aitable_export_csv` | Full CSV export (**with BOM**, Chinese field names as headers, **overwrites same name**) | none (subject to optional `exportRoot`) |
 | `dingtalk_sync_job` | Scheduled export jobs: create / list / remove / enable / disable / run-now | none |
 
-**Dual lock** = `allowDelete: true` (config) **and** `confirm: true` (per call, meaning the user agreed).
+**Double lock** = `allowDelete: true` (config layer) + `confirm: true` (per call, meaning consent was obtained).
 
----
-
-## Settings panel
-
-The panel lives in **Settings → ANB 工具**, as a tab in that shell (shell order 16, this tab order 10).
-
-The **ANB 工具** shell is **bundled inside this package** — it is *not* a separate package you have to install:
-installing any ANB-series plugin brings the shell with it. With several ANB plugins installed there is still
-**only one shell** (a runtime singleton) — the first one to start registers it and the others yield;
-if the owner is disabled, the next ANB plugin takes over and the tab bar lists every panel in order.
-
-| Area | Contents |
-|---|---|
-| **Account binding** | CLI version, org / user, token expiry, credential source, write-gate state; a device-flow login session with QR code, deep link and raw output |
-| **AI Table list** | Keyword scan → candidate discovery + **readability probing** → expand a Base to see its tables → pick one → copy Base ID / Table ID |
-| **Scheduled export** | Selected table + output path + daily/weekly + time → create job; the job table shows next/last run and supports run-now / toggle / delete |
-
-### Engineering form (no build step needed to *use* it)
-
-`lib/client.js` is a build artifact produced by `npm run build`: esbuild bundles
-`plugin-src/client/impl.mjs` into an IIFE, and the hand-written loader wrapper
-`plugin-src/client/index.mjs` is appended after it, producing the official module shape:
-
-```js
-window.__ModuleLoader__.load({ id: '<loader id>', factory: (require) => { /* ... */ } })
-```
-
-- The platform's frozen module table provides `require('react')`.
-- Client → host: `ctx.connection.rpc.call('/api', 'dsh-dingtalk-connector', { method, payload }, signal)`
-- Host endpoint: `ctx.connection.fetch.register({ path: '/api/dsh-dingtalk-connector', methods: ['POST'], ... })`
-
-### ⚠️ Architectural constraint: `connection` must be injected **scoped**
-
-The `connection` service exists **only in the web plane**. Declaring it in the plugin's top-level
-`inject = ['tools', 'connection']` would make the whole plugin stay `inactive` in headless/tui profiles —
-the ten tools would disappear with it. The correct form puts the web-only half into a child fiber:
-
-```js
-export const inject = ['tools']                 // only what is truly required
-
-ctx.inject(['connection'], (rpcCtx) => {        // optional dependency: runs only when available
-  const dispose = registerConnectorRpc(rpcCtx, { ... })
-  rpcCtx.effect(function* () { yield () => dispose?.() }, 'rpc endpoint')
-})
-```
-
-Self-proof of panel availability: `dingtalk_aitable_diagnose` returns an `rpcEndpoint` field;
-`registered: true` means the endpoint is mounted.
-
-### Multi-account
-
-| Capability | Command | Note |
-|---|---|---|
-| List bound accounts | `dws profile list --format json` | one profile = one `corpId + userId`; **multiple accounts are supported** |
-| Remove one binding | `dws auth logout --profile <corpId:userId>` | precise selector logs out exactly one account; the panel asks for confirmation |
-| Scan to bind | `dws auth login --device --recommend --format json` | panel button; output is streamed, account list refreshes on completion |
-
-#### Two measured facts (avoid misdiagnosis)
-
-**① dws does not print a QR code.** It only gives a link, an authorization code, and a deep link with
-`user_code`. **The QR code is drawn by this plugin** (host-side `qrcode`, rendered as an SVG data URL).
-**No third-party QR service is ever called** — the auth link never leaves your machine. If rendering fails,
-the panel degrades to showing the deep link and code.
-
-**② On a machine already signed in to DingTalk, the device flow may complete without scanning.** This is
-not "auto-approval" — it is the *local DingTalk login state* letting the flow pick the currently selected
-account and organization directly. Consequence: the "probe output for 8s" button is **not side-effect free**;
-if the org has enabled CLI access, probing may actually add an account.
-
-#### ⛔ Known blocker: organization has not enabled CLI personal-data access
+### Standard call order (per official documentation)
 
 ```
-CLI data access is not enabled for this organization
-```
-An **organization admin** must enable "Allow members to access their personal data via CLI" in the
-DingTalk open platform. This is an organizational action, not a technical configuration.
-
----
-
-## Workflow: scan → pick → schedule
-
-```
-① dingtalk_aitable_scan(keywords="report,sales", withTables=true)
-      → candidate Bases + readability result each
-② dingtalk_aitable_export_csv(baseId, tableId, outputPath="/abs/path/out.csv")
-      → export once and open it in Excel to confirm headers and encoding
-③ dingtalk_sync_job(action="create", baseId, tableId, outputPath="/abs/path/out.csv",
-                    frequency="daily", time="09:00", label="daily sales")
-      → exports every day at 09:00, overwriting the same file
-④ dingtalk_sync_job(action="list")            # next trigger time and last result
-   dingtalk_sync_job(action="run-now", id="<id>")
-```
-
-**⚠️ Three semantics you must know**
-
-1. **The timer lives inside the DSH host process.** It does not run while DSH is stopped; on restart the
-   next trigger is recomputed. This is an accepted, documented trade-off.
-2. **"Enumerate all Bases" is impossible on the DingTalk side.** `base list` returns only recently visited
-   Bases; `base search` returns ~4 per call and its `hasMore: true` is a **false positive** (the cursor is
-   useless). The scan result is therefore "candidates ∪ manual entries" — **not exhaustive**.
-3. **CSV must start with a BOM.** The file begins with `\uFEFF`; that is the only condition under which
-   Excel reads UTF-8 Chinese correctly. The plugin reads the first three bytes back to prove it landed.
-
----
-
-## Standard workflow (from official docs)
-
-```
-1. dws aitable base search --query "keyword"          → get baseId
-2. dws aitable base get --base-id <B>                 → get tableId
-3. dws aitable table get --base-id <B> --table-id <T> → get fieldId   ★ required before writing
+1. dws aitable base search --query "kw"              → obtain baseId
+2. dws aitable base get --base-id <B>                → obtain tableId
+3. dws aitable table get --base-id <B> --table-id <T> → obtain fieldId  ★required before writing
 4. dws aitable record query --base-id <B> --table-id <T>
 5. dws aitable record create --records '[{"cells":{"fldXXX":"value"}}]'
 ```
 
-### Cell value formats (official)
+The plugin's equivalent: `base(action=search)` → `base(action=get)` → `table(action=get)` → `record_query` → `record_write`.
+
+If you cannot get a `baseId`: `base list` **returns only recently accessed** Bases — open the table once in the web UI, or use `base search`.
+
+### cells read/write cheat sheet (official)
 
 | Field type | Write | Read back |
 |---|---|---|
 | text | `"string"` | `"string"` |
 | number | `123` | `"123"` |
-| singleSelect | `"Option name"` or `{"id":"xxx"}` | `{"id":"x","name":"..."}` |
+| singleSelect | `"option name"` or `{"id":"xxx"}` | `{"id":"x","name":"option"}` |
 | multipleSelect | `["A","B"]` | `[{"id":"x","name":"A"}]` |
 | date | `"2026-03-13"` | ISO string |
 | checkbox | `true`/`false` | `true`/`false` |
@@ -347,141 +225,162 @@ DingTalk open platform. This is an organizational action, not a technical config
 | url | `{"text":"label","link":"https://..."}` | same as write |
 | richText | `{"markdown":"**bold**"}` | same as write |
 
-> In `filters`, prefer the **option id** for singleSelect (get it from `field get`); writing accepts the name.
+> In `filters`, singleSelect is more reliable with the **option id** (from `field get`); writes may use the option name directly.
 
----
+### Multiple accounts: bind by device code / remove
 
-## Troubleshooting
+| Ability | Command | Note |
+|---|---|---|
+| List bound accounts | `dws profile list --format json` | one profile = one `corpId + userId`; **several accounts may coexist** |
+| Remove a binding | `dws auth logout --profile <corpId:userId>` | the precise selector logs out **only that account** (no selector = all); the panel asks for **double confirmation** |
+| Bind by device code | `dws auth login --device --recommend --format json` | the panel's "bind" button; output echoes live and the account list refreshes on success |
 
-| Signal | Meaning | Action |
+#### Two measured facts that prevent misjudgment
+
+**① dws's device flow does not output a QR code.** It only prints `link:`, `authorization code:` and a deep link carrying `user_code`. The **QR code is generated by this plugin**: the host draws the deep link into an SVG data URL with the `qrcode` package and the front end renders an `<img>`. **No third-party QR service is ever called** — the auth link never leaves the machine. If parsing fails, it degrades to "deep link + code only".
+
+**② On a machine already logged into DingTalk, the device flow may complete without scanning.** That is not "automatic approval" — the machine already holds a DingTalk login, so the flow can select that account and organization directly. Consequences: pressing "bind" on such a machine **may finish without showing a code** (using the machine's current account/organization, not letting you choose a new one); and the "probe output for 8 seconds" button **is not free of side effects** — if the organization has enabled CLI access, probing can actually create an account.
+
+#### ⛔ Known blocker: the organization has not enabled CLI personal-data access
+
+A new login stops at Step 4 with `CLI data access is not enabled for this organization`. **The organization's main administrator** must enable that switch in the DingTalk open platform → developer settings, then scan again. **This is an administrative action, not a technical configuration**; until it is resolved, "multiple accounts" effectively means one.
+
+> Note: existing logins **still work** with the switch off (`auth status` valid, data readable). Why new logins are blocked while old sessions work is not yet explained; ask the administrator to check the switch's real state.
+
+## When something goes wrong
+
+| Signal | Meaning | Next step |
 |---|---|---|
 | `command not found: dws` | CLI not installed | `npm i -g dingtalk-workspace-cli` |
 | `请先执行 dws login` | Not authorized | `dws auth login` |
 | `AUTH_TOKEN_EXPIRED` / `USER_TOKEN_ILLEGAL` | Token expired | `dws auth login` again |
-| `permission denied` / 403 | Insufficient permission | Enable AI Table permission in the console **and** add the app as a Base collaborator |
-| `RECOVERY_EVENT_ID=<id>` | Failure snapshot persisted | Follow the `dws recovery plan/execute/finalize` loop |
-| `ARG_UNSAFE` | Argument contains shell metacharacters | Configure `dwsEntry` to bypass the shell |
-| `PAGING_TRUNCATED` | Page limit reached | Continue with the returned cursor or raise `page-limit` |
-
----
+| `permission denied` / 403 | Insufficient permission | enable the AI Table permission and add the app as a Base collaborator |
+| `RECOVERY_EVENT_ID=<id>` | A failure snapshot was persisted | follow the `dws recovery plan/execute/finalize` loop |
+| `ARG_UNSAFE` | Arguments contain shell metacharacters | configure `dwsEntry` to run without a shell |
+| `PAGING_TRUNCATED` | Page limit reached | continue with the returned cursor, or raise `pageLimit` |
+| Panel blank / "empty shell" | RPC envelope shape or endpoint name mismatch | run `npm run verify` (it checks endpoint consistency) |
+| Plugin fails to load, log says entry missing | `lib/` was not built | `npm run doctor`, then `npm run build` |
 
 ## Security and boundaries
 
-- **Write gates are off by default**; deletion additionally requires a per-call `confirm=true`.
-- **Credentials go through environment variables only**, never through command-line arguments
-  (arguments are visible in the process list).
-- **Arguments are passed as an array**, never concatenated into a shell string; setting `dwsEntry`
-  removes the shell entirely, otherwise arguments are strictly validated.
-- **Client-side code never hardcodes export paths**: the default directory comes from the host
-  (`defaultExportDir`).
-- Inherent risks from the official connector also apply: **model hallucination, uncontrolled execution,
-  prompt injection**. The official guidance is to avoid deploying directly in enterprise production;
-  this plugin lowers exposure with **read-first defaults and write gates**.
-- This plugin is an **unofficial** community integration and is not affiliated with or endorsed by
-  DingTalk or DeepSeek.
+- **Write gates are off by default**; deletes additionally require `confirm=true` every time (double lock).
+- **Credentials reach the child process only through environment variables**, never as command-line arguments.
+- **Arguments are passed element by element**, never concatenated into a shell string; with `dwsEntry` set there is no shell at all, otherwise strict validation applies.
+- **The client never hardcodes export paths**: the default directory is supplied by the host (`defaultExportDir`).
+- **Tool visibility**: the host-side bundle mounts on the host plane, so every session under that profile sees these 10 tools.
+- The official connector's own warning applies: **model hallucination / uncontrolled execution / prompt injection** are inherent risks, and it advises against direct production deployment. This plugin reduces exposure with **read-first + write gates**.
+- This is an **unofficial** community integration, not affiliated with or endorsed by DingTalk or DeepSeek.
 
----
+## Data, permissions and privacy
+
+- **What it reads** — the Bases, tables, fields and records you are entitled to in DingTalk AI Tables; the local `dws` authorization state and version.
+- **What leaves the machine, and where** — only DingTalk's official API via `dws` (credentials managed by `dws`); **the plugin itself sends nothing to any third party** and has no telemetry endpoint.
+- **What is written to disk, and where** — exported CSV goes to the `outputPath` you specify (restrictable with `exportRoot`); scheduled job definitions are stored by DSH; the plugin writes nothing else.
+- **Who can read or write** — only the operating-system account running DSH; credentials live in `dws`'s encrypted OAuth store or in the environment variables you provide.
+- **Key default switches** — `allowWrite: false`, `allowDelete: false`, and `confirm` supplied per call.
+- **Where credentials are stored and whether they reach logs** — credentials reach the child process only as environment variables; tool replies never contain them; the panel shows only organization name, user name and expiry.
+
+## Compatibility: required, verified, still unconfirmed
+
+- **Required** — Node ≥ 22.19; `dws` ≥ 1.0.6; DSH `0.1.2-alpha.4` ~ `0.1.5-alpha.1`; the DingTalk permission enabled and the app added as a Base collaborator.
+- **Verified** — the ten tools work across that DSH range; CSV carries a BOM with read-back proof; device-code binding, multiple accounts and removal are implemented and measured; the panel's RPC endpoint is self-provable via `diagnose`.
+- **Still unconfirmed** — new-login behavior when the organization has not enabled CLI personal-data access (known blocker above); command-surface changes from a `dws` upgrade (the plugin version may be unchanged while behavior breaks — **check `dws --version` first**).
 
 ## Development
 
 ```sh
-npm install          # installs esbuild (dev) and qrcode (optional)
-npm run build        # plugin-src/ → lib/  (host: copied with a banner; client: esbuild + loader wrapper)
-npm test             # node --test on pure functions (scheduler / csv / jobs / command registry)
-npm run verify       # eight publish-contract assertions
+npm install          # installs esbuild (build-time) and optional qrcode; builds automatically (prepare)
+npm run build        # plugin-src/ → lib/
+npm test             # node --test pure-function tests (scheduling / CSV / job store / command registry)
+npm run verify       # eight classes of release-contract assertions
+npm run doctor       # read-only environment self-check
+npm run inspect      # diagnostics: size, line count and marker reality of lib/client.js
 npm run check        # build && test && verify   ← what CI runs
 ```
 
-**Never edit `lib/` directly** — it is generated. The single source of truth is `plugin-src/`.
+**Never edit `lib/` directly** — it is a build artifact and will be overwritten. **`plugin-src/` is the only source of truth.**
 
-### Publish-contract assertions (`npm run verify`)
+### `lib/` is not in the repository — rebuild after deleting, resetting or reinstalling
 
-1. Required files present (sources, build output, public docs)
-2. **No `@deepseek-ai/dsh-*` in any dependency section or the lockfile** — DSH runtime packages use
-   module-local Symbols, so a second physical copy breaks host lookup
-3. Client bundle registers the correct loader id
-4. Client bundle registers the settings-panel contract (id / order / label)
-5. Client bundle contains no top-level ESM syntax (it is a build artifact)
-6. **The RPC endpoint name matches across host source, client source and client bundle**
-7. No personal absolute paths or credential assignments anywhere in the tree
-8. **`files` whitelist is self-consistent** — every entry exists on disk, every file referenced by a
-   lifecycle script (e.g. `postinstall`) is inside the whitelist, and every declared entry point
-   (`main` / `exports` / `bin`) is inside the whitelist.
-   *Why this matters:* with a local `link:` install the `files` field has **no effect at all**, so a missing
-   entry is invisible on the dev machine and only blows up for whoever installs the published tarball.
+`lib/` and `node_modules/` are both gitignored, yet the manifest's `main` points at `lib/index.mjs`. The consequence: **without `lib/` the plugin cannot load**, and the symptom is only an obscure module-not-found that never says "you have not built yet". Two guards:
 
----
-
-## Documentation
-
-The root README covers **how to use it**; `docs/` covers **why it works this way and what was verified**.
-
-| Document | Contents |
+| Guard | Behavior |
 |---|---|
-| [docs/安装与前置条件.md](docs/安装与前置条件.md) | ★ **Start here** — the three dependency layers, platform matrix, verification checklist (Chinese) |
-| [docs/发布与版本管理.md](docs/发布与版本管理.md) | Publishing to GitHub and version-bump/release workflow, with a pre-publish checklist (Chinese) |
-| [docs/README.md](docs/README.md) | Documentation index (find a doc by question) |
-| [docs/adr/0001-从手搓REST改为包装dws.md](docs/adr/0001-从手搓REST改为包装dws.md) | ADR: why the v0.1 hand-rolled REST client was abandoned |
-| [docs/实测/](docs/实测/) | Per-run verification records (what actually broke, what was confirmed) |
-| [CONTEXT.md](./CONTEXT.md) | Terminology and **forbidden phrasings** |
-| [CHANGELOG.md](./CHANGELOG.md) | Change history, including the v0.1 → v0.2 architecture reversal |
+| `prepare` hook | Builds automatically after `npm install`. **It never fails** (a failed build only prints guidance); when others install it as a dependency it is silently skipped (the published package ships `lib/`). ⚠️ **Why `prepare` and not `postinstall`**: pnpm 10+ blocks dependency install-time scripts by default (supply-chain protection), and `postinstall` would make **installation fail on the consumer side** (`ERR_PNPM_IGNORED_BUILDS`); `prepare` does not run for registry dependencies at all, so it falls outside that block |
+| `npm run doctor` | Read-only self-check reporting whether Node / esbuild / host sources / `lib/` artifacts / qrcode are in place |
 
----
+**Symptom mapping**: DSH will not start and the log says module-not-found or entry-missing → nine times out of ten `lib/` is absent → confirm with `npm run doctor` → `npm run build`.
 
-## Checking for and installing updates
+### Why markers are matched after unescaping
+
+**esbuild escapes non-ASCII characters (such as Chinese) into `\uXXXX` by default.** So "the source contains 钉钉文档" and "the artifact matches `includes('钉钉文档')`" are two different things — matching the raw string would judge a **perfectly correct** artifact as contract drift. `scripts/bundle-markers.mjs` exposes `containsMarker()`: **a hit either raw or after unescaping counts**.
+
+### Release contract assertions (`npm run verify`, eight classes)
+
+1. Required files present. 2. **No dependency section or lock file may reference `@deepseek-ai/dsh-*`** (DSH runtime packages key on module-local Symbols; a second physical copy breaks host lookup). 3. The client artifact registers the correct loader id (**matching the package name**). 4. The client artifact **carries the ANB tool shell** and registers the panel (`SHELL_ID='anb-toolbox'` order 16 / `anb.tool.tab` order 10). 5. The client artifact contains no top-level ESM syntax. 6. **The RPC endpoint name is identical in host source, client source and client artifact**. 7. No personal absolute paths or credential assignments anywhere in the repo. 8. **The `files` allowlist is self-consistent** (every entry exists; files referenced by lifecycle scripts have their directory included; declared entries are included).
+
+> Why #8 matters: with a local `link:` install the `files` field **has no effect at all**, so missing files are invisible on the developer machine — they only explode as an `npm install` failure on the consumer side after publishing.
+
+### Troubleshooting order for build/verify errors
+
+```
+npm run inspect      # ① artifact reality: size, line count, BOM, escaping, marker hits
+                     # ② if something is genuinely missing, search for it in plugin-src/client/impl.mjs
+                     #    · present in source, absent in artifact → stale artifact, rebuild
+                     #    · absent in source too              → contract drift, fix the source
+```
+
+## Update and uninstall
 
 ```sh
-# current version
-npm view @yiyunet/dsh-dingtalk-connector version
+# Upgrade the plugin
+dsh plugin --profile web add dsh-dingtalk-connector
 
-# upgrade the plugin
-dsh plugin --profile web add @yiyunet/dsh-dingtalk-connector@latest
-dsh plugin --profile web remove @yiyunet/dsh-dingtalk-connector   # uninstall
+# Uninstall
+dsh plugin --profile web remove dsh-dingtalk-connector
 
-# upgrade the external dws dependency (it is a separate package, not bundled)
+# Upgrade the external dws dependency separately (it is an independent package)
 npm i -g dingtalk-workspace-cli@latest
 dws --version
 ```
 
-> **Note**: `dws` is an **external prerequisite** and is not managed by this plugin.
-> If behaviour changes while the plugin version did not, **check `dws --version` first**.
+> **`dws` is an external prerequisite and is not managed by the plugin.** If behavior breaks while the plugin version is unchanged, **check `dws --version` first** — a `dws` upgrade may have changed the command surface.
 
----
+**Uninstall and leftovers**: uninstalling removes the plugin code; **exported CSV files and scheduled job definitions are not deleted** — clean them up manually. `dws` and its authorization belong to the external tool and are unaffected.
 
-## Contact
+After upgrading, run `dingtalk_aitable_diagnose` once to confirm.
 
-- **Bug reports / feature requests**: [open an issue](https://github.com/yiyunet/dsh-dingtalk-connector/issues/new/choose).
-  Include the **DSH version** and the **plugin version** — that makes a fix much faster.
-- **Security**: do not open a public issue — this plugin handles DingTalk credentials and organizational
-  data access. See the "Security and boundaries" section above.
+## Documentation index
 
-> The template asks for versions and OS. Before pasting logs or screenshots,
-> **remove DingTalk credentials, phone numbers and org names**.
+This README covers **how to use it**; `docs/` covers **why it is built this way and what was verified**.
 
----
+| Document | Content |
+|---|---|
+| [docs/安装与前置条件.md](docs/安装与前置条件.md) | ★ **read this first**: the three dependency layers, platform matrix and a verification checklist |
+| [docs/发布与版本管理.md](docs/发布与版本管理.md) | Publishing to GitHub, versioning and release, pre-release checklist |
+| [docs/README.md](docs/README.md) | Documentation index (find documents by question) |
+| [docs/adr/0001-从手搓REST改为包装dws.md](docs/adr/0001-从手搓REST改为包装dws.md) | Architecture decision record: why hand-written REST was abandoned for wrapping `dws` |
+| [docs/实测/](docs/实测/) | Records of each real-device verification |
+| [CONTEXT.md](./CONTEXT.md) | Glossary and **forbidden phrasings** — precision of wording is a feature here, not a style preference |
+| [CHANGELOG.md](./CHANGELOG.md) | Change log |
+| [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) | Third-party components and trademark notices |
 
-## Contributors ✨
+## Feedback
 
-Thanks to everyone who helps this project grow!
+- **Problems / feature requests**: open an [issue](https://github.com/yiyunet/dsh-dingtalk-connector/issues/new/choose). Include the **DSH version** and the **plugin version** (see the package manifest or `CHANGELOG.md`; this document does not duplicate it).
+- **Security matters**: do not open a public issue — this plugin touches DingTalk credentials and organizational data.
 
-This project follows the
-[All Contributors](https://allcontributors.org/en/reference/specification/) specification, recognising
-code, documentation, tests, issue reports, ideas and other contributions.
+> The template asks for version and OS; **remove DingTalk credentials, phone numbers and organization names before pasting logs or screenshots**.
+
+## Contributors
+
+This project follows the [All Contributors](https://allcontributors.org/en/reference/specification/) specification and recognizes code, documentation, tests, issue reports, ideas and other contributions. The list is managed through [`.all-contributorsrc`](./.all-contributorsrc).
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
-The roster is managed by [`.all-contributorsrc`](./.all-contributorsrc).
-
----
-
-## License and disclaimer
+## License and unofficial notice
 
 - **License**: [MIT](./LICENSE) © 2026 yiyunet
-- **Unofficial**: this is an **unofficial community integration**, not affiliated with or endorsed by
-  DingTalk or DeepSeek.
-- **External dependency**: `dws` (`dingtalk-workspace-cli`) is published by DingTalk and licensed under
-  **Apache-2.0**; copyright belongs to its authors. See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
-
-Third-party components: see [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
-Terminology and precise wording: see [CONTEXT.md](./CONTEXT.md).
+- **Unofficial**: this is an **unofficial community integration**, not affiliated with or endorsed by DingTalk or DeepSeek.
+- **External dependency**: `dws` (`dingtalk-workspace-cli`) is published by DingTalk under **Apache-2.0**; copyright belongs to its authors. See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
